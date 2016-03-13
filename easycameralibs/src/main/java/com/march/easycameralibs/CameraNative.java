@@ -105,8 +105,8 @@ public class CameraNative {
     /**
      * 初始化单例
      *
-     * @param context
-     * @return
+     * @param context context
+     * @param camContainerView camcontainerview
      */
     public static void newInst(Context context, CamContainerView camContainerView) {
         if (cameraNative == null) {
@@ -122,7 +122,7 @@ public class CameraNative {
     /**
      * 获取单例
      *
-     * @return
+     * @return cameranative
      */
     public static CameraNative getInst() {
         if (cameraNative == null) {
@@ -135,7 +135,7 @@ public class CameraNative {
     /**
      * 是否初始化完成
      *
-     * @return
+     * @return 是否初始化完成
      */
     public boolean isCameraInit() {
         return cameraInst != null;
@@ -159,8 +159,8 @@ public class CameraNative {
     /**
      * 自定义拍摄回调
      *
-     * @param shutterCallback
-     * @param callback
+     * @param shutterCallback 声音回调
+     * @param callback 拍照回调
      */
     public void doTakePic(Camera.ShutterCallback shutterCallback, Camera.PictureCallback callback) {
         cameraInst.takePicture(shutterCallback, null, callback);
@@ -170,7 +170,7 @@ public class CameraNative {
     /**
      * 制定修改图片的大小
      *
-     * @param size
+     * @param size 图片大小
      */
     public void switchPicSize(int size) {
         if (size < 0) {
@@ -187,9 +187,9 @@ public class CameraNative {
     /**
      * 修改图片大小的同时进行UI的切换
      *
-     * @param size
-     * @param iv
-     * @param res
+     * @param size 图片大小
+     * @param iv 切换图标的View
+     * @param res 资源数组
      */
     public void switchPicSize(int size, ImageView iv, int... res) {
         switchPicSize(size);
@@ -205,6 +205,7 @@ public class CameraNative {
 
     /**
      * 设置拍摄模式gif或者pic
+     * @param mode 拍摄模式
      */
     public void switchTakeMode(int mode) {
         if (mode < 0) {
@@ -230,7 +231,7 @@ public class CameraNative {
     /**
      * 当前是在拍摄图片
      *
-     * @return
+     * @return 是在拍摄图片
      */
     public boolean isTakePic() {
         return mTakeMode == Mode_PIC;
@@ -239,7 +240,7 @@ public class CameraNative {
     /**
      * 当前是在拍摄gif
      *
-     * @return
+     * @return 在快速拍摄
      */
     public boolean isTakeGif() {
         return mTakeMode == Mode_GIF;
@@ -249,7 +250,7 @@ public class CameraNative {
     /**
      * 设置保存的路径,应该是个目录
      *
-     * @param saveDir
+     * @param saveDir 保存图片的路径
      */
     public void setSaveDir(File saveDir) {
         if (!saveDir.isDirectory()) {
@@ -261,7 +262,7 @@ public class CameraNative {
     /**
      * 获取sdk版本
      *
-     * @return
+     * @return 当前sdk
      */
     private int getSdkVersion() {
         return Build.VERSION.SDK_INT;
@@ -390,6 +391,8 @@ public class CameraNative {
 
     /**
      * 定点对焦的代码
+     * @param x 触摸点x
+     * @param y 触摸点y
      */
     public void pointFocus(float x, float y) {
         cameraInst.cancelAutoFocus();
@@ -416,6 +419,8 @@ public class CameraNative {
 
     /**
      * 切换制定摄像头
+     * @param cameraId camera id
+     * @return 切换成功
      */
     public boolean switchCamera(int cameraId) {
         if (!isCanSwitch()) {
@@ -432,6 +437,7 @@ public class CameraNative {
 
     /**
      * 自由切换
+     * @return 切换是否成功
      */
     public boolean switchCamera() {
         if (!isCanSwitch()) {
@@ -448,8 +454,7 @@ public class CameraNative {
     /**
      * 获取指定摄像头的camera对象
      *
-     * @param id
-     * @return
+     * @param id camera id
      */
     public void openCamera(final int id) {
         Camera c = null;
@@ -464,7 +469,7 @@ public class CameraNative {
     /**
      * 二次重新修改相机参数
      *
-     * @param mCurrentCameraId2
+     * @param mCurrentCameraId2 camera id
      */
     private void setUpCamera(int mCurrentCameraId2) {
         openCamera(mCurrentCameraId2);
@@ -485,8 +490,8 @@ public class CameraNative {
     /**
      * 检查该摄像头存不存在
      *
-     * @param facing
-     * @return
+     * @param facing camera id
+     * @return 是否是该摄像头
      */
     private boolean checkCameraFacing(final int facing) {
         if (getSdkVersion() < Build.VERSION_CODES.GINGERBREAD) {
@@ -506,7 +511,7 @@ public class CameraNative {
     /**
      * 是否可以切换
      *
-     * @return
+     * @return 可以切换
      */
     private boolean isCanSwitch() {
         return checkCameraFacing(CAMERA_FACING_FRONT) && checkCameraFacing(CAMERA_FACING_BACK);
@@ -516,7 +521,7 @@ public class CameraNative {
     /**
      * 获取相机的摄像头数量
      *
-     * @return
+     * @return 摄像头数量
      */
     private int getCameraNumbers() {
         return Camera.getNumberOfCameras();
@@ -557,7 +562,7 @@ public class CameraNative {
     /**
      * 切换闪光灯,包括自动状态,如果当前手机不支持自动闪光会直接切换到关闭
      *
-     * @param flashBtn
+     * @param flashBtn 切换闪光图标的View
      * @param res      on auto off
      */
     public void toogleLightWithAuto(ImageView flashBtn, int... res) {
@@ -648,7 +653,7 @@ public class CameraNative {
     /**
      * 切换闪光,不会切换到自动
      *
-     * @param flashBtn
+     * @param flashBtn 切换图标的View
      * @param res      on off
      */
     public void toogleLight(ImageView flashBtn, int... res) {
@@ -703,11 +708,13 @@ public class CameraNative {
         angle = 0;
     }
 
+
     /**
      * 拍摄一张图片
      *
-     * @param fileName
-     * @param listener
+     * @param fileName 文件名
+     * @param listener 监听
+     * @return  是否拍摄成功吧
      */
     public boolean doTakePic(final String fileName, final OnTakePicListener listener) {
         if (isCanTakePic) {
@@ -754,8 +761,8 @@ public class CameraNative {
     /**
      * 一次快速连拍,但是不同机型回调的时间差别大
      *
-     * @param fileName
-     * @param listener
+     * @param fileName 文件名
+     * @param listener 监听
      */
     public void doTakeOneShotPic(final String fileName, final OnTakePicListener listener) {
         cameraInst.setOneShotPreviewCallback(new Camera.PreviewCallback() {
@@ -786,8 +793,8 @@ public class CameraNative {
     /**
      * 获取一帧
      *
-     * @param fileName
-     * @param listener
+     * @param fileName 文件名
+     * @param listener 监听
      */
     public void doTakeFastPic(String fileName, OnTakePicListener listener) {
         if (listener != null) {
@@ -857,8 +864,8 @@ public class CameraNative {
     /**
      * 根据文件名获取
      *
-     * @param fileName
-     * @return
+     * @param fileName 文件名
+     * @return  获取要保存的文件
      */
     private File getSaveFile(String fileName) {
         return new File(saveDir, fileName);
@@ -867,8 +874,8 @@ public class CameraNative {
     /**
      * 线程池,保存图片
      *
-     * @param data
-     * @param filename
+     * @param data 数据
+     * @param filename 文件名
      */
     private void savePic(final byte[] data, final String filename, final CamInfo info) {
         saveThread.execute(new Runnable() {
@@ -909,10 +916,10 @@ public class CameraNative {
     /**
      * 公开数据处理方法
      *
-     * @param isFast
-     * @param data
-     * @param sampleSize
-     * @return
+     * @param isFast 是不是快速拍照
+     * @param data 数据
+     * @param sampleSize 采样率
+     * @return 位图
      */
     public Bitmap handlePicData(boolean isFast, byte[] data, int sampleSize) {
         if (isFast) {
@@ -926,9 +933,9 @@ public class CameraNative {
     /**
      * 快速拍摄数据处理
      *
-     * @param info
-     * @param data
-     * @return
+     * @param info caminfo
+     * @param data 数据
+     * @return 处理之后的位图
      */
     private Bitmap findPreviewBit(CamInfo info, byte[] data) {
         if (data == null) {
@@ -957,8 +964,8 @@ public class CameraNative {
     /**
      * 获取处理后的位图
      *
-     * @param data
-     * @return
+     * @param data 数据
+     * @return 位图
      */
     private Bitmap findBitmap(CamInfo info, byte[] data) {
         if (data == null) {
@@ -998,12 +1005,12 @@ public class CameraNative {
     /**
      * 处理旋转角度和镜面翻转的信息
      *
-     * @param data
-     * @param degree
-     * @param isHorizontalScale
-     * @param size
-     * @param isVerticalScale
-     * @return
+     * @param data 数据
+     * @param degree 角度
+     * @param isHorizontalScale 水平翻转
+     * @param size 大小
+     * @param isVerticalScale 垂直翻转
+     * @return 位图
      */
     private Bitmap convertCameraImg(byte[] data, float degree, boolean isHorizontalScale, int size, boolean isVerticalScale) {
         if (data == null) {

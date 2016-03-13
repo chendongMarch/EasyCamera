@@ -34,10 +34,12 @@ public class CamParaHelper {
     }
 
     /**
-     * 获取当前设备的最大的预览size
+     *  获取当前设备的最大的预览size
      *
-     * @param th
-     * @return
+     * @param th 比率
+     * @return size
+     * @param cameraInst camera
+     * @return size
      */
     public static Camera.Size getMaxPreviewSize(Camera cameraInst,float th) {
         List<Camera.Size> list = cameraInst.getParameters().getSupportedPreviewSizes();
@@ -51,13 +53,6 @@ public class CamParaHelper {
         return null;
     }
 
-    /**
-     * 获取合适预览大小
-     *
-     * @param th       宽高比,大于1(1,1.33,1.77)
-     * @param minWidth
-     * @return
-     */
     public static Camera.Size getPropPreviewSize(Camera cameraInst,float th, int minWidth) {
         List<Camera.Size> list = cameraInst.getParameters().getSupportedPreviewSizes();
         printSize("preview", list);
@@ -90,11 +85,13 @@ public class CamParaHelper {
 
 
     /**
-     * 获取合适照片大小
+     * * 获取合适照片大小
      *
      * @param th       宽高比,大于1(1,1.33,1.77)
-     * @param minWidth
-     * @return
+     * @param minWidth 最小宽度
+
+     * @param cameraInst camera
+     * @return size
      */
     public static Camera.Size getPropPictureSize(Camera cameraInst,float th, int minWidth) {
         List<Camera.Size> list = cameraInst.getParameters().getSupportedPictureSizes();
@@ -128,8 +125,8 @@ public class CamParaHelper {
     /**
      * 尺寸比率
      *
-     * @param s
-     * @param rate
+     * @param s size
+     * @param rate 比率
      * @return
      */
     private static boolean equalRate(Camera.Size s, float rate) {
@@ -143,12 +140,6 @@ public class CamParaHelper {
 
 
 
-    /**
-     * 测试打印
-     *
-     * @param txt
-     * @param sizes
-     */
     private static void printSize(String txt, List<Camera.Size> sizes) {
         Log.i("chendong","type is " + txt);
         for (Camera.Size s : sizes) {
