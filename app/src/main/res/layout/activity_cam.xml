@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <com.march.easycameralibs.widgets.CamContainerView
+        android:id="@+id/activity_mycamera_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:easycam_isShowTop="true"
+        />
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/activity_mycamera_take"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="拍照"
+            />
+
+        <Button
+            android:id="@+id/activity_mycamera_switch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="镜头"
+            />
+
+        <Button
+            android:id="@+id/activity_mycamera_flash"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="闪光"
+            />
+
+        <Button
+            android:id="@+id/activity_mycamera_over"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="结束"
+            />
+
+        <Button
+            android:id="@+id/activity_mycamera_mode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="模式"
+            />
+
+        <Button
+            android:id="@+id/activity_mycamera_size"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="大小"
+            />
+
+    </LinearLayout>
+
+</RelativeLayout>
