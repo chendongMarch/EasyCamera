@@ -1,4 +1,4 @@
-package com.march.easycameralibs;
+package com.march.easycameralibs.easycam;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -16,6 +16,10 @@ import android.view.OrientationEventListener;
 import android.view.SurfaceView;
 import android.widget.ImageView;
 import android.widget.Toast;
+
+import com.march.easycameralibs.helper.CamInfo;
+import com.march.easycameralibs.helper.CamParaHelper;
+import com.march.easycameralibs.widgets.CamContainerView;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -93,7 +97,12 @@ public class CameraNative {
         this.camContainerView = camContainerView;
         saveThread = Executors.newFixedThreadPool(2);
         handler = new Handler();
-        saveDir = Environment.getExternalStorageDirectory();//FileUtils.getDcimDir("chendong");
+        try {
+            saveDir = Environment.getExternalStorageDirectory();//FileUtils.getDcimDir("chendong");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
 //        int mode = SPUtils.get().getCameraDefaultMode();
 //        if (mode == -1) {
 //            setTakeMode(CameraNative.Mode_PIC);

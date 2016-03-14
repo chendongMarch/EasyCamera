@@ -1,4 +1,4 @@
-package com.march.easycameralibs;
+package com.march.easycameralibs.helper;
 
 import android.hardware.Camera;
 import android.util.Log;

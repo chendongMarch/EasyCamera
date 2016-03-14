@@ -1,4 +1,4 @@
-package com.march.easycameralibs;
+package com.march.easycameralibs.widgets;
 
 import android.content.Context;
 import android.os.AsyncTask;
@@ -11,6 +11,8 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.animation.ScaleAnimation;
 import android.widget.RelativeLayout;
+
+import com.march.easycameralibs.easycam.CameraNative;
 
 
 /**

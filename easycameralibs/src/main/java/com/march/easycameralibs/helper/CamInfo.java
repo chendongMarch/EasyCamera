@@ -1,4 +1,4 @@
-package com.march.easycameralibs;
+package com.march.easycameralibs.helper;
 
 /**
  * babyphoto_app     com.babypat.common.camera

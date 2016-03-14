@@ -1,4 +1,4 @@
-package com.march.easycameralibs;
+package com.march.easycameralibs.widgets;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -9,6 +9,8 @@ import android.view.SurfaceView;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import com.march.easycameralibs.R;
+import com.march.easycameralibs.easycam.CameraNative;
 /**
  * CdLibsTest     com.march.libs.mycamera
  * Created by 陈栋 on 16/3/12.
@@ -21,11 +23,11 @@ public class CamContainerView extends FrameLayout {
 
     public CamContainerView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        LayoutInflater.from(getContext()).inflate(R.layout.widget_cam_container, this, true);
+        LayoutInflater.from(getContext()).inflate(R.layout.easycam_widget_cam_container, this, true);
         if (attrs != null) {
             TypedArray array = getContext().obtainStyledAttributes(attrs,
-                    R.styleable.attr_CamContainerView);
-            isShowTopBar = array.getBoolean(R.styleable.attr_CamContainerView_attr_isShowTop, false);
+                    R.styleable.easycam_CamContainerView);
+            isShowTopBar = array.getBoolean(R.styleable.easycam_CamContainerView_easycam_isShowTop, false);
             array.recycle();
         }
         init();
@@ -60,7 +62,7 @@ public class CamContainerView extends FrameLayout {
         changeDisplayUI();
     }
 
-    public SurfaceView getSurfaceView(){
+    public SurfaceView getSurfaceView() {
         return mSurfaceView;
     }
 
@@ -97,4 +99,7 @@ public class CamContainerView extends FrameLayout {
     }
 
 
+    public void setShowTopBar(boolean showTopBar) {
+        isShowTopBar = showTopBar;
+    }
 }

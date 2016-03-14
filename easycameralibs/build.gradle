@@ -1,9 +1,9 @@
 apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
-version = "1.0.3"
+version = "1.0.5"
 android {
-    resourcePrefix "attr_"
+    resourcePrefix "easycam_"
 
     compileSdkVersion 22
     buildToolsVersion "23.0.2"

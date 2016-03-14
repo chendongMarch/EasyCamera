@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <com.march.libs.mycamera.CameraSurfaceView
+    <com.march.easycameralibs.widgets.CameraSurfaceView
         android:id="@+id/widget_cam_container_surface"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
