@@ -1069,6 +1069,7 @@ public class CameraNative {
     public void onPause() {
         if (mScreenOrientationEventListener != null)
             mScreenOrientationEventListener.disable();
+        releaseCamera();
     }
 
     public void onResume() {

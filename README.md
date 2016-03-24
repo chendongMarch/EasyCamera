@@ -2,6 +2,10 @@
 
 #Camera Libs
 
+###[库代码链接](https://github.com/chendongMarch/EasyCamera)
+##compile 'com.march.cameralibs:easycameralibs:1.0.7'
+##更新日志
+###1.0.7 三星手机推出后台返回崩溃
 
 ###在xml文件中使用
 ```java
