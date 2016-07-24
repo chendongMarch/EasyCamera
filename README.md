@@ -6,6 +6,7 @@
 ##compile 'com.march.cameralibs:easycameralibs:1.0.7'
 ##更新日志
 ###1.0.7 三星手机推出后台返回崩溃
+###1.0.8 小米红米note2机型适配
 
 ###在xml文件中使用
 ```java
@@ -187,11 +188,11 @@ public void shutDownAutoRotate()
 public void clickBtn(View view) {
         switch (view.getId()) {
             case R.id.activity_mycamera_take:
-            		//拍照
+            //拍照
                 cameraNative.doTakePic(str(System.currentTimeMillis()) + ".jpg", null);
                 break;
             case R.id.activity_mycamera_switch:
-            		//切换摄像头
+            //切换摄像头
                 cameraNative.switchCamera();
                 break;
             case R.id.activity_mycamera_flash:
