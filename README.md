@@ -1,6 +1,7 @@
-#easycamera
+#EasyCamera
 
-#Camera Libs
+##希望能很好的封装关于Camera的一系列操作，简化关于Camera的开发，类库正在不断完善当中
+##图片的拍摄和存储异步进行，支持照片拍摄和快速连拍
 
 ###[库代码链接](https://github.com/chendongMarch/EasyCamera)
 ##compile 'com.march.cameralibs:easycameralibs:1.0.7'
@@ -24,6 +25,7 @@
         cam:isShowTop="true"/>
 ```
 
+
 ###创建Activity同步生命周期
 ```java
 	@Override
@@ -41,9 +43,10 @@
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        CameraNative.getInst().onDestory();
+        CameraNative.getInst().onDestroy();
     }
 ```
+
 ###获取CameraNative实例并设置监听
 ```java
 //get the singleton of CameraNative
@@ -52,7 +55,8 @@ mCameraNative = CameraNative.getInst();
 
 //设置保存图片的路径
 mCameraNative.setSaveDir(new File(ImageUtils.getSystemDcimPath()));
-//设置闪光灯监听，有三个回调可以自由实现
+
+//设置闪光灯监听，有三个回调可以自由实现,使用该回调方法可以自定义在开启闪光灯时的额外操作，比如弹窗提醒
 mCameraNative.setOnFlashChangeListener(new CameraNative.OnFlashChangeListener() {
             @Override
             public boolean OnTurnFlashOn() {
@@ -61,7 +65,7 @@ mCameraNative.setOnFlashChangeListener(new CameraNative.OnFlashChangeListener() 
             }
 });
 
-//设置照片拍摄的监听的监听，将会实现三个方法
+//设置照片拍摄的监听的监听，将会实现三个方法用来检测图片的存储进度
 mCameraNative.setOnSavePicListener(this);
 @Override
 public void InSaveProgress(int num, float percent) {
@@ -74,17 +78,11 @@ public void OnSaveOver() {
         //保存完成，回调发生
 }
 
-@Override
-public void CanotTake() {
-        ToastUtil.show("稍候操作");
-        //camera拍摄过快时将会产生异常，会回调改方法
-}
-
 //错误回调监听
 mCameraNative.setOnErrorListener(new CameraNative.OnErrorListener() {
             @Override
-            public void error(String errMsg) {
-            //错误信息，默认错误信息仍旧是会打印的
+            public void error(int errorCode,String errMsg) {
+            //重大错误会使用错误回调交给开发者处理，比如相机没有获得权限无法打开，详细参照CameraConstant错误码
 
             }
         });
@@ -93,77 +91,94 @@ mCameraNative.setOnErrorListener(new CameraNative.OnErrorListener() {
 ###闪光灯API
 ```java
 //切换闪光灯
-//如果相机支持将会切换到自动状态，否则直接切换到关闭状态，是可以自适应的切换模式，需要设置按钮和相关资源
+
+//如果相机支持自动状态将会切换到自动状态，否则直接切换到关闭状态，是可以自适应的切换模式
+//切换闪关灯状态，不涉及UI的变化
+public void switchLightWithAuto()
 //flashBtn ImageView 切换按钮 可以为空，为空时不切换
 //res int[] 资源数组，长度必须是3，可以为空，为空时不切换
-public void toogleLightWithAuto(ImageView flashBtn, int... res)
-mCameraNative.toogleLightWithAuto(flashBtn,
-                R.mipmap.camera_flashon,
-                 R.mipmap.camera_flashauto,
-                  R.mipmap.camera_flashoff);
+public void switchLightWithAuto(ImageView flashBtn, int... res)
+eg:
+mCameraNative.switchLightWithAuto(flashBtn,
+                R.mipmap.camera_flashOn,
+                 R.mipmap.camera_flashAuto,
+                  R.mipmap.camera_flashOff);
 
 //开启和关闭状态切换
+//切换闪关灯状态，不涉及UI的变化
+public void switchLight()
 //flashBtn ImageView 切换按钮 可以为空，为空时不切换
 //res int[] 资源数组，长度必须是2，可以为空，为空时不切换
-public void toogleLight(ImageView flashBtn, int... res)
-mCameraNative.toogleLight(flashBtn,
-					R.mipmap.camera_flashon,
-						R.mipmap.camera_flashoff);
+public void switchLight(ImageView flashBtn, int... res)
+eg:
+mCameraNative.switchLight(flashBtn,
+					R.mipmap.camera_flashOn,
+						R.mipmap.camera_flashOff);
 ```
 
 ###照片大小API
 ```java
-//自动切换图片资源同时切换图片大小
-//size参数 为CameraNative.NotConvert时将会自己切换否则切换到制定状态(CameraNative.NotConvert,CameraNative.One2One,CameraNative.Four2Three)
+//size参数:(CameraConstant.AutoSwitch,CameraConstant.Four2Three,CameraConstant.One2One)
+//涉及UI的变化
 public void switchPicSize(int size, ImageView iv, int... res)
-//无关资源切换参数同上
-调用CamContainerView的相关方法切换照片大小和界面显示
+//无关UI变化
 public void switchPicSize(int size)
-public boolean isSizeOne2One()
-public boolean isFour2Three()
+//获取当前照片大小设置
+public int getCurrentSize()
 ```
 
 ###照片模式API
 ```java
+//mode参数：(CameraConstant.AutoSwitch,CameraConstant.MODE_PIC,CameraConstant.MODE_GIF)
 //切换照片模式，两种模式
 //MODE_PIC 照片模式，像素在300w以上
 //MODE_GIF 连拍模式，相片像素600*800
 
 //切换拍照模式,同时重新初始化相机
 public void switchTakeMode(int mode)
-public boolean isTakePic()
-public boolean isTakeGif()
+public int getTakeMode()
+```
+
+###切换镜头API
+```java
+//cameraId参数：(CameraConstant.AutoSwitch,CameraConstant.CAMERA_FACING_BACK,CameraConstant.CAMERA_FACING_FRONT)
+//切换camera镜头方向
+public boolean switchCameraFacing(int cameraId)
 ```
 
 ###拍照API
 ```java
-//拍摄照片
-//fileName 指定文件名存储,不能为空
-//接口
+//拍照回调的接口，它不但是数据回调的接口也是对数据处理进行的参数配置，实现部分方法
 public static abstract class OnTakePicListener {
-//拍摄获得的二进制数组
-        public void onTakePic(byte[] data) {
+        //获取拍摄的数据，isOnlyGetOriginData为true时返回原始数据，
+        //该方法的速度是相对较快的，因为不进行存储裁剪存储等操作。
+        //当你想将它转化为bitmap时调用mCameraNative.handlePicData()方法进行转换
+        public void onTakePic(byte[] data, CameraInfo info) {
 
         }
-//处理之后的bitmap
+
+        //获取拍摄的数据，isOnlyGetOriginData为false时返回位图同时进行存储
         public void onTakePic(Bitmap bit) {
 
         }
-//是否处理成bitmap,默认不处理
-        public boolean isConvert2Bitmap() {
+
+        //是否只获取原始的byte数据，默认false
+        public boolean isOnlyGetOriginData() {
             return false;
         }
-//压缩的sampleSize,默认不压缩
+
+        //采样的标准，根据二进制数据大小决定采样率默认是1
         public int getInSampleSize(byte[] data) {
             return 1;
         }
-}
+    }
+//普通拍照
 public boolean doTakePic(String fileName, boolean isConvert2Bit, OnTakePicListener listener)
 
 //快速连拍
 //开始连拍时调用doStartTakeFastPic()
 public void doStartTakeFastPic()
-//拍摄一张，fileName == null时不存储，使用listener获取拍摄的数据
+//拍摄一张，使用listener获取拍摄的数据
 public void doTakeFastPic(String fileName, OnTakePicListener listener)
 //拍摄完毕停止连拍
 public void doStopFastPic()
@@ -171,8 +186,8 @@ public void doStopFastPic()
 
 ###图片处理API
 ```java
-//在外部处理byte数组,返回bitmap
-public Bitmap handlePicData(boolean isFast, byte[] data, int sampleSize)
+//在外部处理byte数组,返回bitmap,比如回调public void onTakePic(byte[] data, CameraInfo info) 的数据
+public Bitmap handlePicData(byte[] data, int sampleSize, CameraInfo info)
 ```
 
 ###其他
@@ -188,29 +203,42 @@ public void shutDownAutoRotate()
 public void clickBtn(View view) {
         switch (view.getId()) {
             case R.id.activity_mycamera_take:
-            //拍照
-                cameraNative.doTakePic(str(System.currentTimeMillis()) + ".jpg", null);
+                cameraNative.doTakePic(System.currentTimeMillis() + ".jpg", new CameraNative.OnTakePicListener() {
+                    @Override
+                    public void onTakePic(byte[] data, CameraInfo info) {
+                        Bitmap bitmap = CameraNative.getInst().handlePicData(data, 1, info);
+                    }
+
+                    @Override
+                    public void onTakePic(Bitmap bit) {
+                        //当isOnlyGetOriginData为true时，将不会返回bitmap
+                    }
+
+                    @Override
+                    public boolean isOnlyGetOriginData() {
+                        return true;
+                    }
+
+                    @Override
+                    public int getInSampleSize(byte[] data) {
+                        return data.length % 10000;
+                    }
+                });
                 break;
             case R.id.activity_mycamera_switch:
-            //切换摄像头
-                cameraNative.switchCamera();
+                cameraNative.switchCameraFacing(CameraConstant.AutoSwitch);
                 break;
             case R.id.activity_mycamera_flash:
-            //切换闪光灯
-                cameraNative.toogleLightWithAuto(null);
+                cameraNative.switchLightWithAuto();
                 break;
             case R.id.activity_mycamera_over:
-            //拍照结束
                 cameraNative.takePicOver();
                 break;
             case R.id.activity_mycamera_mode:
-            //切换拍摄模式
-                cameraNative.switchTakeMode(CameraNative.NotConvert);
+                cameraNative.switchTakeMode(CameraConstant.AutoSwitch);
                 break;
-            case  R.id.activity_mycamera_size:
-            //切换照片大小
-                cameraNative.switchPicSize(CameraNative.NotConvert);
+            case R.id.activity_mycamera_size:
+                cameraNative.switchPicSize(CameraConstant.AutoSwitch);
                 break;
         }
-    }
 ```

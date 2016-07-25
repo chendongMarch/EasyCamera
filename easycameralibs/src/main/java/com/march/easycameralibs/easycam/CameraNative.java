@@ -2,51 +2,43 @@ package com.march.easycameralibs.easycam;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
-import android.graphics.Matrix;
 import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
-import android.util.Log;
+import android.support.annotation.NonNull;
 import android.view.OrientationEventListener;
 import android.view.SurfaceView;
 import android.widget.ImageView;
-import android.widget.Toast;
 
-import com.march.easycameralibs.helper.CamInfo;
-import com.march.easycameralibs.helper.CamParaHelper;
+import com.march.easycameralibs.common.CameraConstant;
+import com.march.easycameralibs.common.CameraInfo;
+import com.march.easycameralibs.controller.ConfigController;
+import com.march.easycameralibs.controller.DataProcessController;
+import com.march.easycameralibs.controller.LightController;
 import com.march.easycameralibs.widgets.CamContainerView;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * babyphoto_app     com.babypat.common
  * Created by 陈栋 on 16/3/5.
- * 功能:
+ * 功能:  处理拍照的核心功能
  */
 public class CameraNative {
 
-    private final String tag = " CameraNative ";
-    public static final int CAMERA_FACING_BACK = 0, CAMERA_FACING_FRONT = 1;
-    public static final int Mode_GIF = 0, Mode_PIC = 1;
-    public static final int One2One = 0, Four2Three = 1;
-    public static final int NotConvert = -1;
-    private int mCurrentSize = Four2Three;
-    private int mCurrentCameraId = CAMERA_FACING_BACK;
-    private int mTakeMode = Mode_PIC;
+    //当前初始化的拍摄状态
+    private int mCurrentSize = CameraConstant.Four2Three;
+    private int mCurrentCameraId = CameraConstant.CAMERA_FACING_BACK;
+    private int mTakeMode = CameraConstant.Mode_PIC;
+    private boolean isAllowRememberLastTimeMode = true;
 
-    private Camera cameraInst;
+    private Camera mCameraInst;
     private Camera.Parameters parameters;
     private Camera.Size previewSize, pictureSize;
 
@@ -55,12 +47,11 @@ public class CameraNative {
     private CamContainerView camContainerView;
     private static CameraNative cameraNative;
     private Handler handler;
-
-
+    //感应器，当横向拍照时自动旋转
     private OrientationEventListener mScreenOrientationEventListener;
     private File saveDir;
-    private ExecutorService saveThread;
 
+    private int width, height;
     private float angle = 0;
     private static Integer saveNum = 0;
     private int takeNum = 0;
@@ -68,25 +59,12 @@ public class CameraNative {
     private boolean checkSaveIsOver = false;
     private boolean isStartPublishSaveProgress = false;
     private byte[] buffer;
-
-
-    private void toast(String msg) {
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
-    }
-
-    private void printInfo(String msg) {
-        Log.i("chendong", msg);
-    }
-
-
-    private int getWidth() {
-        return context.getResources().getDisplayMetrics().widthPixels;
-    }
-
-    private int getHeight() {
-        return context.getResources().getDisplayMetrics().heightPixels;
-    }
-
+    //处理闪光灯
+    private LightController mLightController;
+    //处理拍摄到的数据
+    private DataProcessController mDataProcessController;
+    //配置参数
+    private ConfigController mConfigController;
 
     /**
      * 私有化构造方法
@@ -95,27 +73,27 @@ public class CameraNative {
         this.context = context;
         this.surfaceView = camContainerView.getSurfaceView();
         this.camContainerView = camContainerView;
-        saveThread = Executors.newFixedThreadPool(2);
-        handler = new Handler();
-        try {
-            saveDir = Environment.getExternalStorageDirectory();//FileUtils.getDcimDir("chendong");
-        }catch (Exception e){
-            e.printStackTrace();
-        }
 
-//        int mode = SPUtils.get().getCameraDefaultMode();
-//        if (mode == -1) {
-//            setTakeMode(CameraNative.Mode_PIC);
-//        } else
-//            setTakeMode(mode);
+        handler = new Handler();
+        width = context.getResources().getDisplayMetrics().widthPixels;
+        height = context.getResources().getDisplayMetrics().heightPixels;
+        //保证保存路径不为空
+        saveDir = Environment.getExternalStorageDirectory();
+        mLightController = new LightController(mCameraInst);
+        mDataProcessController = new DataProcessController(saveDir);
+        mConfigController = new ConfigController(context);
+        //可以使用默认的拍摄模式
+        if (isAllowRememberLastTimeMode) {
+            this.mTakeMode = mConfigController.getLastTimeMode(CameraConstant.Mode_PIC);
+        }
     }
 
 
     /**
      * 初始化单例
      *
-     * @param context context
-     * @param camContainerView camcontainerview
+     * @param context          context
+     * @param camContainerView CamContainerView
      */
     public static void newInst(Context context, CamContainerView camContainerView) {
         if (cameraNative == null) {
@@ -126,7 +104,6 @@ public class CameraNative {
             }
         }
     }
-
 
     /**
      * 获取单例
@@ -141,13 +118,49 @@ public class CameraNative {
     }
 
 
+    // 发送err到监听
+    private void publishError(int errorCode, String msg) {
+        if (mOnErrorListener != null) {
+            mOnErrorListener.error(errorCode, msg);
+        }
+    }
+
+    /**
+     * 公开数据处理方法
+     *
+     * @param data       数据
+     * @param sampleSize 采样率
+     * @return 位图
+     */
+    public Bitmap handlePicData(byte[] data, int sampleSize, CameraInfo info) {
+        return mDataProcessController.findBitmap(info, data);
+    }
+
+    public CameraInfo getImmediateCamInfo(int sampleSize) {
+        return new CameraInfo(angle, mCurrentCameraId, mCurrentSize, sampleSize);
+    }
+
+    /**
+     * 是否记住上一次的模式
+     *
+     * @param allowRememberLastTimeMode boolean
+     */
+    public void setAllowRememberLastTimeMode(boolean allowRememberLastTimeMode) {
+        isAllowRememberLastTimeMode = allowRememberLastTimeMode;
+    }
+
+
+    public void setLogEnable(boolean log) {
+        mConfigController.setLogEnable(log);
+    }
+
     /**
      * 是否初始化完成
      *
      * @return 是否初始化完成
      */
     public boolean isCameraInit() {
-        return cameraInst != null;
+        return mCameraInst != null;
     }
 
 
@@ -164,98 +177,6 @@ public class CameraNative {
         buffer = null;
     }
 
-
-    /**
-     * 自定义拍摄回调
-     *
-     * @param shutterCallback 声音回调
-     * @param callback 拍照回调
-     */
-    public void doTakePic(Camera.ShutterCallback shutterCallback, Camera.PictureCallback callback) {
-        cameraInst.takePicture(shutterCallback, null, callback);
-    }
-
-
-    /**
-     * 制定修改图片的大小
-     *
-     * @param size 图片大小
-     */
-    public void switchPicSize(int size) {
-        if (size < 0) {
-            if (mCurrentSize == One2One)
-                this.mCurrentSize = Four2Three;
-            else
-                this.mCurrentSize = One2One;
-        } else {
-            this.mCurrentSize = size;
-        }
-        camContainerView.changeDisplayUI();
-    }
-
-    /**
-     * 修改图片大小的同时进行UI的切换
-     *
-     * @param size 图片大小
-     * @param iv 切换图标的View
-     * @param res 资源数组
-     */
-    public void switchPicSize(int size, ImageView iv, int... res) {
-        switchPicSize(size);
-        if (iv != null && res != null && res.length == 2) {
-            if (mCurrentSize == One2One)
-                iv.setImageResource(res[0]);
-            else
-                iv.setImageResource(res[1]);
-        } else {
-            printError("if u do not want to change image res,use switchPicSize(int size) please!");
-        }
-    }
-
-    /**
-     * 设置拍摄模式gif或者pic
-     * @param mode 拍摄模式
-     */
-    public void switchTakeMode(int mode) {
-        if (mode < 0) {
-            if (mTakeMode == Mode_GIF)
-                mTakeMode = Mode_PIC;
-            else
-                mTakeMode = Mode_GIF;
-        } else {
-            mTakeMode = mode;
-        }
-        resetCameraSize();
-    }
-
-    /**
-     * 设置拍摄的模式
-     *
-     * @param mTakeMode
-     */
-    private void setTakeMode(int mTakeMode) {
-        this.mTakeMode = mTakeMode;
-    }
-
-    /**
-     * 当前是在拍摄图片
-     *
-     * @return 是在拍摄图片
-     */
-    public boolean isTakePic() {
-        return mTakeMode == Mode_PIC;
-    }
-
-    /**
-     * 当前是在拍摄gif
-     *
-     * @return 在快速拍摄
-     */
-    public boolean isTakeGif() {
-        return mTakeMode == Mode_GIF;
-    }
-
-
     /**
      * 设置保存的路径,应该是个目录
      *
@@ -268,150 +189,61 @@ public class CameraNative {
         this.saveDir = saveDir;
     }
 
-    /**
-     * 获取sdk版本
-     *
-     * @return 当前sdk
-     */
-    private int getSdkVersion() {
-        return Build.VERSION.SDK_INT;
-    }
-
-    /**
-     * 重新设置camera的预览和照片大小
-     */
-    private void resetCameraSize() {
-        cameraInst.stopPreview();
-        parameters = cameraInst.getParameters();
-
-        if (mTakeMode == Mode_GIF) {
-            parameters.setPictureFormat(ImageFormat.NV21);
-            previewSize = CamParaHelper.getPropPreviewSize(cameraInst, 1.3333f, 500);
-            pictureSize = CamParaHelper.getPropPictureSize(cameraInst, 1.3333f, 500);
-        }
-
-        if (mTakeMode == Mode_PIC) {
-            parameters.setPictureFormat(ImageFormat.JPEG);
-            previewSize = CamParaHelper.getMaxPreviewSize(cameraInst, 1.33333f);//getPropPreviewSize( 1.3333f, 1500000);
-            pictureSize = CamParaHelper.getPropPictureSize(cameraInst, 1.3333f, 3000000);
-        }
-
-        printError("计算获取到  preview = " + previewSize.width + "*" + previewSize.height + "   " + "  pic = " +
-                pictureSize.width + "*" + pictureSize.height);
-
-        parameters.setPreviewSize(previewSize.width, previewSize.height);
-        parameters.setPictureSize(pictureSize.width, pictureSize.height);
-
-        try {
-            cameraInst.setParameters(parameters);
-            cameraInst.startPreview();
-        } catch (Exception e) {
-            printInfo("resetCameraSize 设置出错" + e.getMessage());
-            StackTraceElement[] stackTrace = e.getStackTrace();
-            for (StackTraceElement s : stackTrace) {
-                printInfo(s.toString());
-            }
-            cameraInst.startPreview();
-        }
-
-        printInfo("设置完毕后  preview = " + cameraInst.getParameters().getPreviewSize().width + "*" + cameraInst.getParameters().getPreviewSize().height + "   " + "  pic = " +
-                cameraInst.getParameters().getPictureSize().width + "*" + cameraInst.getParameters().getPictureSize().height);
-    }
-
-    /**
-     * 控制图像的正确显示方向
-     */
-    private void setDispaly(Camera.Parameters parameters) {
-        if (Build.VERSION.SDK_INT >= 23 && mCurrentCameraId == CAMERA_FACING_FRONT) {
-            setDisplayOrientation(270);
-        } else if (Build.VERSION.SDK_INT >= 8) {
-            setDisplayOrientation(90);
-        } else {
-            parameters.setRotation(90);
-        }
-    }
-
-
-    /**
-     * 实现的图像的正确显示
-     */
-    private void setDisplayOrientation(int i) {
-        Method downPolymorphic;
-        try {
-            downPolymorphic = cameraInst.getClass().getMethod("setDisplayOrientation",
-                    new Class[]{int.class});
-            if (downPolymorphic != null) {
-                downPolymorphic.invoke(cameraInst, new Object[]{i});
-            }
-        } catch (Exception e) {
-            Log.e("Came_e", "图像出错");
-        }
-    }
-
-
-    private void setFocusMode(Camera.Parameters para) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH && parameters.getSupportedFocusModes()
-                .contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
-            para.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);//1连续对焦
-        } else {
-            para.setFocusMode(Camera.Parameters.FOCUS_MODE_FIXED);
-        }
-    }
-
+/**************************************Camera初始化相关SATART****************************************************************************/
     /**
      * 初始化相机参数
      */
     public void initCamera() {
+        mCameraInst.stopPreview();
+        parameters = mCameraInst.getParameters();
 
-        cameraInst.stopPreview();
-        parameters = cameraInst.getParameters();
-
-        setFocusMode(parameters);
-        setDispaly(parameters);
+        mConfigController.setFocusMode(parameters);
+        mConfigController.setDisplay(mCameraInst, parameters, mCurrentCameraId);
         List<int[]> supportedPreviewFpsRange = parameters.getSupportedPreviewFpsRange();
         int[] ints = supportedPreviewFpsRange.get(supportedPreviewFpsRange.size() - 1);
         parameters.setPreviewFpsRange(ints[0], ints[1]);
         try {
-            cameraInst.setParameters(parameters);
+            mCameraInst.setParameters(parameters);
         } catch (Exception e) {
-            printInfo("initCamera 设置出错" + e.getMessage());
+            mConfigController.printInfo("initCamera 设置出错" + e.getMessage());
             StackTraceElement[] stackTrace = e.getStackTrace();
             for (StackTraceElement s : stackTrace) {
-                printInfo(s.toString());
+                mConfigController.printInfo(s.toString());
             }
         }
 
         resetCameraSize();
 
-        cameraInst.startPreview();
-        cameraInst.cancelAutoFocus();// 2如果要实现连续的自动对焦，这一句必须加上
+        startPreview();
+        mCameraInst.cancelAutoFocus();// 2如果要实现连续的自动对焦，这一句必须加上
     }
 
     /**
      * 释放camera
      */
     public void releaseCamera() {
-        if (cameraInst != null) {
-            cameraInst.setPreviewCallback(null);
-            cameraInst.release();
-            cameraInst = null;
+        if (mCameraInst != null) {
+            mCameraInst.setPreviewCallback(null);
+            mCameraInst.release();
+            mCameraInst = null;
         }
     }
 
     /**
-     * 定点对焦的代码
+     * 对制定点定点对焦的代码
+     *
      * @param x 触摸点x
      * @param y 触摸点y
      */
     public void pointFocus(float x, float y) {
-        cameraInst.cancelAutoFocus();
-        parameters = cameraInst.getParameters();
+        mCameraInst.cancelAutoFocus();
+        parameters = mCameraInst.getParameters();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
             if (parameters.getMaxNumMeteringAreas() > 0) {
                 List<Camera.Area> areas = new ArrayList<>();
                 //xy变换了
-                int rectY = (int) (-x * 2000 / getWidth() + 1000);
-                int rectX = (int) (y * 2000 / getHeight() - 1000);
+                int rectY = (int) (-x * 2000 / width + 1000);
+                int rectX = (int) (y * 2000 / height - 1000);
 
                 int left = rectX < -900 ? -1000 : rectX - 100;
                 int top = rectY < -900 ? -1000 : rectY - 100;
@@ -421,42 +253,9 @@ public class CameraNative {
                 areas.add(new Camera.Area(area1, 800));
                 parameters.setMeteringAreas(areas);
             }
-            setFocusMode(parameters);
+            mConfigController.setFocusMode(parameters);
         }
-        cameraInst.setParameters(parameters);
-    }
-
-    /**
-     * 切换制定摄像头
-     * @param cameraId camera id
-     * @return 切换成功
-     */
-    public boolean switchCamera(int cameraId) {
-        if (!isCanSwitch()) {
-            printError("This device not support switch camera!");
-            return false;
-        }
-        if (mCurrentCameraId != cameraId) {
-            mCurrentCameraId = (mCurrentCameraId + 1) % getCameraNumbers();
-            releaseCamera();
-            setUpCamera(mCurrentCameraId);
-        }
-        return true;
-    }
-
-    /**
-     * 自由切换
-     * @return 切换是否成功
-     */
-    public boolean switchCamera() {
-        if (!isCanSwitch()) {
-            printError("This device not support switch camera!");
-            return false;
-        }
-        mCurrentCameraId = (mCurrentCameraId + 1) % getCameraNumbers();
-        releaseCamera();
-        setUpCamera(mCurrentCameraId);
-        return true;
+        mCameraInst.setParameters(parameters);
     }
 
 
@@ -466,107 +265,148 @@ public class CameraNative {
      * @param id camera id
      */
     public void openCamera(final int id) {
-        Camera c = null;
         try {
-            c = Camera.open(id);
+            mCameraInst= Camera.open(id);
         } catch (Exception e) {
+            publishError(CameraConstant.ERROR_OPEN_CAMERA_FAILED, "open failed");
             e.printStackTrace();
         }
-        cameraInst = c;
     }
-
-    /**
-     * 二次重新修改相机参数
-     *
-     * @param mCurrentCameraId2 camera id
-     */
-    private void setUpCamera(int mCurrentCameraId2) {
-        openCamera(mCurrentCameraId2);
-        if (cameraInst != null) {
-            try {
-                cameraInst.setPreviewDisplay(surfaceView.getHolder());
-                initCamera();
-                cameraInst.startPreview();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            toast("切换失败");
-        }
-    }
-
-
-    /**
-     * 检查该摄像头存不存在
-     *
-     * @param facing camera id
-     * @return 是否是该摄像头
-     */
-    private boolean checkCameraFacing(final int facing) {
-        if (getSdkVersion() < Build.VERSION_CODES.GINGERBREAD) {
-            return false;
-        }
-        final int cameraCount = Camera.getNumberOfCameras();
-        Camera.CameraInfo info = new Camera.CameraInfo();
-        for (int i = 0; i < cameraCount; i++) {
-            Camera.getCameraInfo(i, info);
-            if (facing == info.facing) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 是否可以切换
-     *
-     * @return 可以切换
-     */
-    private boolean isCanSwitch() {
-        return checkCameraFacing(CAMERA_FACING_FRONT) && checkCameraFacing(CAMERA_FACING_BACK);
-    }
-
-
-    /**
-     * 获取相机的摄像头数量
-     *
-     * @return 摄像头数量
-     */
-    private int getCameraNumbers() {
-        return Camera.getNumberOfCameras();
-    }
-
 
     public void initSurfaceHolder() {
         try {
-            cameraInst.setPreviewDisplay(surfaceView.getHolder());
+            mCameraInst.setPreviewDisplay(surfaceView.getHolder());
         } catch (IOException e) {
             e.printStackTrace();
-            printError("initSurfaceHolder 出错");
+            mConfigController.printError("initSurfaceHolder 出错");
         }
     }
 
+    //开始预览
     public void startPreview() {
         try {
-            cameraInst.startPreview();
+            mCameraInst.startPreview();
         } catch (Exception e) {
-            printError("startPreview 出错");
+            mConfigController.printError("startPreview 出错");
         }
+    }
+/**************************************Camera初始化相关END,切换图片大小，拍摄模式，镜头转向START*********************************************************/
 
+    /**
+     * 制定修改图片的大小
+     *
+     * @param size 图片大小 可选 One2One,Four2Three,AutoSwitch;
+     */
+    public void switchPicSize(int size) {
+        if (size == CameraConstant.AutoSwitch) {
+            if (mCurrentSize == CameraConstant.One2One)
+                this.mCurrentSize = CameraConstant.Four2Three;
+            else
+                this.mCurrentSize = CameraConstant.One2One;
+        } else {
+            this.mCurrentSize = size;
+        }
+        camContainerView.changeDisplayUI();
     }
 
-    public int getTakeNum() {
-        return takeNum;
+    /**
+     * 修改图片大小的同时进行UI的切换
+     *
+     * @param size 图片大小
+     * @param iv   切换图标的View
+     * @param res  资源数组
+     */
+    public void switchPicSize(int size, ImageView iv, int... res) {
+        switchPicSize(size);
+        if (iv != null && res != null && res.length == 2) {
+            if (mCurrentSize == CameraConstant.One2One)
+                iv.setImageResource(res[0]);
+            else
+                iv.setImageResource(res[1]);
+        } else {
+            mConfigController.printError("if u do not want to change image res,use switchPicSize(int size) please!");
+        }
     }
 
-    public boolean isSizeOne2One() {
-        return mCurrentSize == One2One;
+    /**
+     * 切换制定摄像头
+     *
+     * @param cameraId cameraId CAMERA_FACING_BACK,CAMERA_FACING_FRONT,AutoSwitch
+     * @return 是否切换成功
+     */
+    public boolean switchCameraFacing(int cameraId) {
+        if (!mConfigController.isCanSwitchCameraFacing()) {
+            mConfigController.printError("This device not support switch camera!");
+            return false;
+        }
+        //自动切换
+        if (cameraId == CameraConstant.AutoSwitch) {
+            mCurrentCameraId = (mCurrentCameraId + 1) % mConfigController.getCameraNumbers();
+        } else if (mCurrentCameraId != cameraId) {
+            mCurrentCameraId = (mCurrentCameraId + 1) % mConfigController.getCameraNumbers();
+        }
+        releaseCamera();
+        setUpCamera(mCurrentCameraId);
+        return true;
     }
 
-    public boolean isFour2Three() {
-        return mCurrentSize == Four2Three;
+    /**
+     * 设置拍摄模式gif或者pic
+     *
+     * @param mode 拍摄模式
+     */
+    public void switchTakeMode(int mode) {
+        if (mode == CameraConstant.AutoSwitch) {
+            if (mTakeMode == CameraConstant.Mode_GIF)
+                mTakeMode = CameraConstant.Mode_PIC;
+            else
+                mTakeMode = CameraConstant.Mode_GIF;
+        } else {
+            mTakeMode = mode;
+        }
+        resetCameraSize();
     }
 
+    /**
+     * 获取当前照片大小
+     *
+     * @return size one2one four2three
+     */
+    public int getCurrentSize() {
+        return mCurrentSize;
+    }
+
+    /**
+     * 获取当前镜头方向
+     *
+     * @return cameraId front back
+     */
+    public int getCurrentCameraId() {
+        return mCurrentCameraId;
+    }
+
+    /**
+     * 获取当前拍摄模式
+     *
+     * @return gif 和 pic
+     */
+    public int getTakeMode() {
+        return mTakeMode;
+    }
+/**********************************************切换图片大小，拍摄模式，镜头转向END,闪光灯START************************************************************/
+    /**
+     * 切换闪光，不切换资源
+     */
+    public void switchLightWithAuto() {
+        switchLightWithAuto(null);
+    }
+
+    /**
+     * 切换闪光，不切换到自动
+     */
+    public void switchLight() {
+        switchLight(null);
+    }
 
     /**
      * 切换闪光灯,包括自动状态,如果当前手机不支持自动闪光会直接切换到关闭
@@ -574,90 +414,9 @@ public class CameraNative {
      * @param flashBtn 切换闪光图标的View
      * @param res      on auto off
      */
-    public void toogleLightWithAuto(ImageView flashBtn, int... res) {
-        if (mCurrentCameraId == CAMERA_FACING_FRONT) {
-            printError("facing front camera not support change flash mode");
-            return;
-        }
-        if (cameraInst == null || cameraInst.getParameters() == null
-                || cameraInst.getParameters().getSupportedFlashModes() == null) {
-            printError("camera not init over");
-            return;
-        }
-
-        if (res != null && res.length != 3 && flashBtn != null) {
-            printError("This method is not allow auto light,u must provide 3 image resource!");
-            return;
-        }
-
-        Camera.Parameters parameters = cameraInst.getParameters();
-        String mode = cameraInst.getParameters().getFlashMode();
-        List<String> foucusMode = cameraInst.getParameters().getSupportedFlashModes();
-        if (Camera.Parameters.FLASH_MODE_OFF.equals(mode)
-                && foucusMode.contains(Camera.Parameters.FLASH_MODE_ON)) {//关闭状态切换到开启状态
-            //如果有监听,查看监听的结果,没有监听直接切换
-            if (mOnFlashChangeListener != null) {
-                if (mOnFlashChangeListener.OnTurnFlashOn()) {
-                    parameters.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
-                    cameraInst.setParameters(parameters);
-                    if (flashBtn != null && res != null)
-                        flashBtn.setImageResource(res[0]);
-                }
-            } else {
-                parameters.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
-                cameraInst.setParameters(parameters);
-                if (flashBtn != null && res != null)
-                    flashBtn.setImageResource(res[0]);
-            }
-        } else if (Camera.Parameters.FLASH_MODE_ON.equals(mode)) {//开启状态切换到自动状态,如果不支持自动状态切换到关闭状态
-            if (foucusMode.contains(Camera.Parameters.FLASH_MODE_AUTO)) {//有自动状态,切换到自动状态
-                if (mOnFlashChangeListener != null) {
-                    if (mOnFlashChangeListener.OnTurnFlashAuto()) {
-                        parameters.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
-                        cameraInst.setParameters(parameters);
-                        if (flashBtn != null && res != null)
-                            flashBtn.setImageResource(res[1]);
-                    }
-                } else {
-                    parameters.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
-                    cameraInst.setParameters(parameters);
-                    if (flashBtn != null && res != null)
-                        flashBtn.setImageResource(res[1]);
-                }
-            } else if (foucusMode.contains(Camera.Parameters.FLASH_MODE_OFF)) {//没有自动状态,切换到关闭状态
-                if (mOnFlashChangeListener != null) {
-                    if (mOnFlashChangeListener.OnTurnFlashOff()) {
-                        parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                        cameraInst.setParameters(parameters);
-                        if (flashBtn != null && res != null)
-                            flashBtn.setImageResource(res[2]);
-                    }
-                } else {
-                    parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                    cameraInst.setParameters(parameters);
-                    if (flashBtn != null && res != null)
-                        flashBtn.setImageResource(res[2]);
-                }
-
-            }
-        } else if (Camera.Parameters.FLASH_MODE_AUTO.equals(mode)//自动状态切换到关闭状态
-                && foucusMode.contains(Camera.Parameters.FLASH_MODE_OFF)) {
-            if (mOnFlashChangeListener != null) {
-                if (mOnFlashChangeListener.OnTurnFlashOff()) {
-                    parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                    cameraInst.setParameters(parameters);
-                    if (flashBtn != null && res != null)
-                        flashBtn.setImageResource(res[2]);
-                }
-            } else {
-                parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                cameraInst.setParameters(parameters);
-                if (flashBtn != null && res != null)
-                    flashBtn.setImageResource(res[2]);
-            }
-        }
+    public void switchLightWithAuto(ImageView flashBtn, int... res) {
+        mLightController.switchLightWithAuto(flashBtn, mCurrentCameraId, mOnFlashChangeListener, res);
     }
-
 
     /**
      * 切换闪光,不会切换到自动
@@ -665,105 +424,68 @@ public class CameraNative {
      * @param flashBtn 切换图标的View
      * @param res      on off
      */
-    public void toogleLight(ImageView flashBtn, int... res) {
-        if (res != null && res.length != 2 && flashBtn != null) {
-            printError("This method is not allow auto light,u must provide 2 image resource!");
-            return;
-        }
-
-        Camera.Parameters parameters = cameraInst.getParameters();
-        String mode = cameraInst.getParameters().getFlashMode();
-        List<String> foucusMode = cameraInst.getParameters().getSupportedFlashModes();
-        if (Camera.Parameters.FLASH_MODE_OFF.equals(mode)
-                && foucusMode.contains(Camera.Parameters.FLASH_MODE_ON)) {//关闭状态切换到开启状态
-            if (mOnFlashChangeListener != null) {
-                if (mOnFlashChangeListener.OnTurnFlashOn()) {
-                    parameters.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
-                    cameraInst.setParameters(parameters);
-                    if (flashBtn != null && res != null)
-                        flashBtn.setImageResource(res[0]);
-                }
-            } else {
-                parameters.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
-                cameraInst.setParameters(parameters);
-                if (flashBtn != null && res != null)
-                    flashBtn.setImageResource(res[0]);
-            }
-        } else if (Camera.Parameters.FLASH_MODE_ON.equals(mode)
-                && foucusMode.contains(Camera.Parameters.FLASH_MODE_OFF)) {//开启状态切换到关闭状态
-            if (mOnFlashChangeListener != null) {
-                if (mOnFlashChangeListener.OnTurnFlashOff()) {
-                    parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                    cameraInst.setParameters(parameters);
-                    if (flashBtn != null && res != null)
-                        flashBtn.setImageResource(res[2]);
-                }
-            } else {
-                parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                cameraInst.setParameters(parameters);
-                if (flashBtn != null && res != null)
-                    flashBtn.setImageResource(res[2]);
-            }
-        }
+    public void switchLight(ImageView flashBtn, int... res) {
+        mLightController.switchLightWithAuto(flashBtn, mCurrentCameraId, mOnFlashChangeListener, res);
     }
 
-
-    /**
-     * 关闭旋转监听,横屏拍摄的图片将不会自动旋转
-     */
-    public void shutDownAutoRotate() {
-        if (mScreenOrientationEventListener != null)
-            mScreenOrientationEventListener.disable();
-        angle = 0;
-    }
-
-
+/**********************************************闪光灯END,拍摄照片START************************************************************/
     /**
      * 拍摄一张图片
      *
      * @param fileName 文件名
      * @param listener 监听
-     * @return  是否拍摄成功吧
+     * @return 是否拍摄成功吧
      */
-    public boolean doTakePic(final String fileName, final OnTakePicListener listener) {
-        if (isCanTakePic) {
-            if (fileName == null) {
-                printError("fileName can not be null");
-                return false;
-            }
-            isCanTakePic = false;
-            try {
-                cameraInst.takePicture(null, null, new Camera.PictureCallback() {
-                    @Override
-                    public void onPictureTaken(byte[] data, Camera camera) {
-                        int sample = listener == null ? 1 : listener.getInSampleSize(data);
-                        CamInfo immediateCamInfo = getImmediateCamInfo(sample);
-                        if (listener != null) {
-                            listener.onTakePic(data);
-                            if (listener.isConvert2Bitmap()) {
-                                listener.onTakePic(findBitmap(immediateCamInfo, data));
-                            }
-                        }
-                        takeNum++;
-                        isCanTakePic = true;
-                        if (fileName != null)
-                            savePic(data, fileName, immediateCamInfo);
-                        cameraInst.startPreview();
-
-                    }
-                });
-            } catch (Exception e) {
-                //捕获拍摄的异常
-                e.printStackTrace();
-                isCanTakePic = true;
-                cameraInst.startPreview();
-            }
-
-            return true;
-        } else {
-            toast("请稍候拍摄");
+    public boolean doTakePic(final String fileName, @NonNull final OnTakePicListener listener) {
+        if (!isCanTakePic) {
+            mConfigController.toast("请稍候拍摄");
             return false;
         }
+
+        isCanTakePic = false;
+        try {
+            mCameraInst.takePicture(null, null, new Camera.PictureCallback() {
+                @Override
+                public void onPictureTaken(byte[] data, Camera camera) {
+                    publishPicData(false, data, fileName, listener);
+                    startPreview();
+                }
+            });
+        } catch (Exception e) {
+            //捕获拍摄的异常
+            e.printStackTrace();
+            isCanTakePic = true;
+            startPreview();
+        }
+        return true;
+
+    }
+
+    /**
+     * 保存图片到文件
+     *
+     * @param bitmap           图片
+     * @param immediateCamInfo 信息
+     * @param fileName         文件名
+     */
+    private void savePic(Bitmap bitmap, CameraInfo immediateCamInfo, String fileName) {
+        //保存
+        mDataProcessController.savePic(bitmap, fileName, immediateCamInfo, new Runnable() {
+            @Override
+            public void run() {
+                synchronized (saveNum) {
+                    saveNum++;
+                    if (mOnSavePicListener != null && isStartPublishSaveProgress) {
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                mOnSavePicListener.InSaveProgress(saveNum, saveNum * 1.0f / takeNum);
+                            }
+                        });
+                    }
+                }
+            }
+        });
     }
 
 
@@ -773,15 +495,11 @@ public class CameraNative {
      * @param fileName 文件名
      * @param listener 监听
      */
-    public void doTakeOneShotPic(final String fileName, final OnTakePicListener listener) {
-        cameraInst.setOneShotPreviewCallback(new Camera.PreviewCallback() {
+    public void doTakeOneShotPic(final String fileName, @NonNull final OnTakePicListener listener) {
+        mCameraInst.setOneShotPreviewCallback(new Camera.PreviewCallback() {
             @Override
             public void onPreviewFrame(byte[] data, Camera camera) {
-                if (listener != null) {
-                    listener.onTakePic(data);
-                }
-                if (fileName != null)
-                    savePic(data, fileName, getImmediateCamInfo(1));
+                publishPicData(true, data, fileName, listener);
             }
         });
     }
@@ -791,7 +509,7 @@ public class CameraNative {
      * 开启快速连拍
      */
     public void doStartTakeFastPic() {
-        cameraInst.setPreviewCallback(new Camera.PreviewCallback() {
+        mCameraInst.setPreviewCallback(new Camera.PreviewCallback() {
             @Override
             public void onPreviewFrame(byte[] data, Camera camera) {
                 buffer = data;
@@ -805,29 +523,49 @@ public class CameraNative {
      * @param fileName 文件名
      * @param listener 监听
      */
-    public void doTakeFastPic(String fileName, OnTakePicListener listener) {
-        if (listener != null) {
-            listener.onTakePic(buffer);
-            if (listener.isConvert2Bitmap()) {
-                int inSampleSize = listener.getInSampleSize(buffer);
-                listener.onTakePic(findPreviewBit(getImmediateCamInfo(inSampleSize), buffer));
-            }
-        }
-        if (fileName != null) {
-            CamInfo immediateCamInfo = getImmediateCamInfo(1);
-            savePic(buffer, fileName, immediateCamInfo);
-        }
+    public void doTakeFastPic(String fileName, @NonNull OnTakePicListener listener) {
+        publishPicData(true, buffer, fileName, listener);
     }
 
     /**
      * 停止快速连拍
      */
     public void doStopFastPic() {
-        if (cameraInst != null)
-            cameraInst.setPreviewCallback(null);
+        if (mCameraInst != null)
+            mCameraInst.setPreviewCallback(null);
         buffer = null;
     }
 
+    /**
+     * 根据回调的配置处理数据
+     *
+     * @param isFast   是不是快速拍照
+     * @param postData 数据
+     * @param fileName 文件
+     * @param listener 监听
+     */
+    private void publishPicData(boolean isFast, byte[] postData,
+                                String fileName, @NonNull OnTakePicListener listener) {
+        byte[] data;
+        if (isFast)
+            data = mDataProcessController.convertPreviewData(mCameraInst, postData);
+        else
+            data = postData;
+        int inSampleSize = listener.getInSampleSize(data);
+        CameraInfo immediateCamInfo = getImmediateCamInfo(inSampleSize);
+        //如果只获取原始数据
+        if (listener.isOnlyGetOriginData()) {
+            listener.onTakePic(data, immediateCamInfo);
+        } else if (fileName != null) {
+            takeNum++;
+            //如果压缩成位图，同时存储
+            Bitmap bitmap = mDataProcessController.findBitmap(immediateCamInfo, data);
+            listener.onTakePic(bitmap);
+            savePic(bitmap, immediateCamInfo, fileName);
+        } else {
+            mConfigController.printError("when u want to get bitmap, filename must not ne null");
+        }
+    }
 
     /**
      * 拍照完毕启动检测是否存储完毕的程序
@@ -849,7 +587,7 @@ public class CameraNative {
                         });
                     }
                     try {
-                        Thread.sleep(200);
+                        Thread.sleep(100);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -868,208 +606,16 @@ public class CameraNative {
             }
         }).start();
     }
+/**********************************************拍照END,生命周期START************************************************************/
 
 
     /**
-     * 根据文件名获取
-     *
-     * @param fileName 文件名
-     * @return  获取要保存的文件
+     * 关闭旋转监听,横屏拍摄的图片将不会自动旋转
      */
-    private File getSaveFile(String fileName) {
-        return new File(saveDir, fileName);
-    }
-
-    /**
-     * 线程池,保存图片
-     *
-     * @param data 数据
-     * @param filename 文件名
-     */
-    private void savePic(final byte[] data, final String filename, final CamInfo info) {
-        saveThread.execute(new Runnable() {
-            @Override
-            public void run() {
-                Bitmap newBitmap;
-                System.gc();
-                newBitmap = findBitmap(info, data);
-
-                if (newBitmap != null)
-                    if (!newBitmap.isRecycled()) {
-                        //保存到sd卡,可替换
-                        save2Sd(getSaveFile(filename), newBitmap, 100);
-
-                    } else {
-                        printError("bitmap is recycled!");
-                    }
-
-                if (newBitmap != null && !newBitmap.isRecycled())
-                    newBitmap.recycle();
-
-                synchronized (saveNum) {
-                    saveNum++;
-                    if (mOnSavePicListener != null && isStartPublishSaveProgress) {
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                mOnSavePicListener.InSaveProgress(saveNum, saveNum * 1.0f / takeNum);
-                            }
-                        });
-
-                    }
-                }
-            }
-        });
-    }
-
-    /**
-     * 公开数据处理方法
-     *
-     * @param isFast 是不是快速拍照
-     * @param data 数据
-     * @param sampleSize 采样率
-     * @return 位图
-     */
-    public Bitmap handlePicData(boolean isFast, byte[] data, int sampleSize) {
-        if (isFast) {
-            return findPreviewBit(getImmediateCamInfo(sampleSize), data);
-        } else {
-            return findBitmap(getImmediateCamInfo(sampleSize), data);
-        }
-    }
-
-
-    /**
-     * 快速拍摄数据处理
-     *
-     * @param info caminfo
-     * @param data 数据
-     * @return 处理之后的位图
-     */
-    private Bitmap findPreviewBit(CamInfo info, byte[] data) {
-        if (data == null) {
-            return null;
-        }
-        Camera.Size size = cameraInst.getParameters().getPreviewSize(); //获取预览大小
-        final int w = size.width;  //宽度
-        final int h = size.height;
-        final YuvImage image = new YuvImage(data, ImageFormat.NV21, w, h, null);
-        ByteArrayOutputStream os = new ByteArrayOutputStream(data.length);
-        if (!image.compressToJpeg(new Rect(0, 0, w, h), 100, os)) {
-            printError("image.compressToJpeg fail");
-            return null;
-        }
-
-        byte[] tmp = os.toByteArray();
-
-        return findBitmap(info, tmp);
-    }
-
-    public CamInfo getImmediateCamInfo(int sampleSize) {
-        return new CamInfo(angle, mCurrentCameraId, mCurrentSize, sampleSize);
-    }
-
-
-    /**
-     * 获取处理后的位图
-     *
-     * @param data 数据
-     * @return 位图
-     */
-    private Bitmap findBitmap(CamInfo info, byte[] data) {
-        if (data == null) {
-            return null;
-        }
-        Bitmap tempBitmap;
-        /**
-         * 根据镜头以及手机旋转角度调整图片
-         */
-        if (info.cameraId == CAMERA_FACING_BACK) {
-            tempBitmap = convertCameraImg(data, 90 + info.angle, false, info.sampleSize, false);
-        } else {
-            if (Build.VERSION.SDK_INT >= 23) {
-                tempBitmap = convertCameraImg(data, 90 + info.angle, true, info.sampleSize, false);
-
-            } else
-                tempBitmap = convertCameraImg(data, 270 + info.angle, true, info.sampleSize, false);
-        }
-
-        /**
-         * 根据图片尺寸截取相关部分
-         */
-        switch (info.picSize) {
-            case One2One:
-                if (info.angle != 0)
-                    tempBitmap = Bitmap.createBitmap(tempBitmap, (tempBitmap.getWidth() - tempBitmap.getHeight()) / 2, 0, tempBitmap.getHeight(), tempBitmap.getHeight());
-                else
-                    tempBitmap = Bitmap.createBitmap(tempBitmap, 0, (tempBitmap.getHeight() - tempBitmap.getWidth()) / 2, tempBitmap.getWidth(), tempBitmap.getWidth());
-                break;
-            case Four2Three:
-                break;
-        }
-        return tempBitmap;
-    }
-
-
-    /**
-     * 处理旋转角度和镜面翻转的信息
-     *
-     * @param data 数据
-     * @param degree 角度
-     * @param isHorizontalScale 水平翻转
-     * @param size 大小
-     * @param isVerticalScale 垂直翻转
-     * @return 位图
-     */
-    private Bitmap convertCameraImg(byte[] data, float degree, boolean isHorizontalScale, int size, boolean isVerticalScale) {
-        if (data == null) {
-            return null;
-        }
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = size;
-        Bitmap bit = BitmapFactory.decodeByteArray(data, 0, data.length, options);
-        printInfo("degree is " + degree);
-        if (!isHorizontalScale && !isVerticalScale && (Math.abs(degree - 360) < 5 || Math.abs(degree) < 5)) {
-            printInfo("此时图片不需要旋转或者镜像翻转处理," +
-                    "\n当前sdk版本 = " + Build.VERSION.SDK_INT + "  " +
-                    "\n当前手机旋转角度 angle = " + angle + "  " +
-                    "\n当前镜头朝向 = " + (mCurrentCameraId == 0 ? "后置" : "前置"));
-            return bit;
-        }
-
-
-        int w = bit.getWidth();
-        int h = bit.getHeight();
-        Matrix matrix = new Matrix();
-        if (isHorizontalScale)
-            matrix.postScale(1, -1);   //镜像垂直翻转
-        if (isVerticalScale)
-            matrix.postScale(-1, 1);   //镜像水平翻转
-        if (!(Math.abs(degree - 360) < 5 || Math.abs(degree) < 5))
-            matrix.postRotate(degree);
-        Bitmap convertBmp = Bitmap.createBitmap(bit, 0, 0, w, h, matrix, true);
-
-        if (!bit.isRecycled())
-            bit.recycle();
-        return convertBmp;
-    }
-
-
-    /**
-     * 保存图片到sd
-     * @param path 文件路径
-     * @param bit 位图
-     * @param quality 质量
-     */
-    private void save2Sd(File path, Bitmap bit, int quality) {
-//        ImageUtils.saveImageToSD(context, getSaveFile(filename).getAbsolutePath(), newBitmap, 100);
-//        ImageUtils.saveBit2Sd(context, bit, path, quality);
-    }
-
-    public void onPause() {
+    public void shutDownAutoRotate() {
         if (mScreenOrientationEventListener != null)
             mScreenOrientationEventListener.disable();
-        releaseCamera();
+        angle = 0;
     }
 
     public void onResume() {
@@ -1095,15 +641,89 @@ public class CameraNative {
         mScreenOrientationEventListener.enable();
     }
 
-    public void onDestory() {
+    public void onPause() {
+        if (mScreenOrientationEventListener != null)
+            mScreenOrientationEventListener.disable();
+        releaseCamera();
+    }
+
+    public void onDestroy() {
         doStopFastPic();
         releaseCamera();
         shutDownAutoRotate();
         cameraNative = null;
-//        SPUtils.get().putCameraDefaultMode(mTakeMode);
+        if (isAllowRememberLastTimeMode)
+            mConfigController.putLastTimeMode(this.mTakeMode);
     }
 
+/**********************************生命周期END，私有方法START *****************************************************************/
+    /**
+     * 重新设置camera的预览和照片大小
+     */
+    private void resetCameraSize() {
+        mCameraInst.stopPreview();
+        parameters = mCameraInst.getParameters();
 
+        if (mTakeMode == CameraConstant.Mode_GIF) {
+            parameters.setPictureFormat(ImageFormat.NV21);
+            previewSize = mConfigController.getPropPreviewSize(mCameraInst, 1.3333f, 500);
+            pictureSize = mConfigController.getPropPictureSize(mCameraInst, 1.3333f, 500);
+        }
+
+        if (mTakeMode == CameraConstant.Mode_PIC) {
+            parameters.setPictureFormat(ImageFormat.JPEG);
+            previewSize = mConfigController.getMaxPreviewSize(mCameraInst, 1.33333f);//getPropPreviewSize( 1.3333f, 1500000);
+            pictureSize = mConfigController.getPropPictureSize(mCameraInst, 1.3333f, 3000000);
+        }
+
+        mConfigController.printError("计算获取到  preview = " + previewSize.width + "*" + previewSize.height + "   " + "  pic = " +
+                pictureSize.width + "*" + pictureSize.height);
+
+        parameters.setPreviewSize(previewSize.width, previewSize.height);
+        parameters.setPictureSize(pictureSize.width, pictureSize.height);
+
+        try {
+            mCameraInst.setParameters(parameters);
+            startPreview();
+        } catch (Exception e) {
+            mConfigController.printInfo("resetCameraSize 设置出错" + e.getMessage());
+            StackTraceElement[] stackTrace = e.getStackTrace();
+            for (StackTraceElement s : stackTrace) {
+                mConfigController.printInfo(s.toString());
+            }
+            startPreview();
+        }
+
+        mConfigController.printInfo("设置完毕后  preview = " + mCameraInst.getParameters().getPreviewSize().width + "*" + mCameraInst.getParameters().getPreviewSize().height + "   " + "  pic = " +
+                mCameraInst.getParameters().getPictureSize().width + "*" + mCameraInst.getParameters().getPictureSize().height);
+    }
+
+    /**
+     * 二次重新修改相机参数
+     *
+     * @param mCurrentCameraId2 camera id
+     */
+    private void setUpCamera(int mCurrentCameraId2) {
+        openCamera(mCurrentCameraId2);
+
+        if (mCameraInst != null) {
+            try {
+                mCameraInst.setPreviewDisplay(surfaceView.getHolder());
+                initCamera();
+                startPreview();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            mConfigController.toast("镜头切换失败");
+        }
+    }
+
+/************************************私有方法END,接口和回调START********************************************************/
+
+    /**
+     * s闪光灯开启监听，在开启之前做某些操作时实现
+     */
     public static abstract class OnFlashChangeListener {
 
         public boolean OnTurnFlashOn() {
@@ -1120,29 +740,32 @@ public class CameraNative {
     }
 
     public interface OnErrorListener {
-        void error(String errMsg);
+        void error(int errorCode, String errMsg);
     }
 
     public interface OnSavePicListener {
         void InSaveProgress(int num, float percent);
 
         void OnSaveOver();
-
     }
 
     public static abstract class OnTakePicListener {
-        public void onTakePic(byte[] data) {
+        //获取拍摄的数据，isOnlyGetOriginData为true时返回原始数据，该方法的速度是相对较快的，因为不进行存储裁剪存储等操作。
+        public void onTakePic(byte[] data, CameraInfo info) {
 
         }
 
+        //获取拍摄的数据，isOnlyGetOriginData为false时返回位图同时进行存储
         public void onTakePic(Bitmap bit) {
 
         }
 
-        public boolean isConvert2Bitmap() {
+        //是否只获取原始的byte数据，默认false
+        public boolean isOnlyGetOriginData() {
             return false;
         }
 
+        //采样的标准，根据二进制数据大小决定采样率默认是1
         public int getInSampleSize(byte[] data) {
             return 1;
         }
@@ -1164,13 +787,6 @@ public class CameraNative {
         this.mOnSavePicListener = mOnSavePicListener;
     }
 
-    private void printError(String msg) {
-        if (mOnErrorListener != null) {
-            mOnErrorListener.error(msg);
-        }
-        Log.e(tag, msg);
-    }
-
 
     private void autoFocus() {
         new Thread() {
@@ -1182,8 +798,8 @@ public class CameraNative {
                     e.printStackTrace();
                 }
 
-                if (cameraInst != null)
-                    cameraInst.autoFocus(new Camera.AutoFocusCallback() {
+                if (mCameraInst != null)
+                    mCameraInst.autoFocus(new Camera.AutoFocusCallback() {
                         @Override
                         public void onAutoFocus(boolean success, Camera camera) {
                             if (success)

@@ -12,6 +12,7 @@ import android.view.View;
 import android.view.animation.ScaleAnimation;
 import android.widget.RelativeLayout;
 
+import com.march.easycameralibs.common.CameraConstant;
 import com.march.easycameralibs.easycam.CameraNative;
 
 
@@ -66,19 +67,20 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         Log.i(tag, "---surfaceCreated---");
         //打开相机
         if (!CameraNative.getInst().isCameraInit()) {
-            Log.i("chendong", "CameraNative.getInst().isCameraInit() " + CameraNative.getInst().isCameraInit());
             new AsyncTask<Void, Void, Void>() {
                 @Override
                 protected Void doInBackground(Void... params) {
-                    CameraNative.getInst().openCamera(CameraNative.CAMERA_FACING_BACK);
+                    CameraNative.getInst().openCamera(CameraConstant.CAMERA_FACING_BACK);
                     return null;
                 }
 
                 @Override
                 protected void onPostExecute(Void aVoid) {
                     super.onPostExecute(aVoid);
-                    CameraNative.getInst().initSurfaceHolder();
-                    CameraNative.getInst().initCamera();
+                    if (CameraNative.getInst().isCameraInit()) {
+                        CameraNative.getInst().initSurfaceHolder();
+                        CameraNative.getInst().initCamera();
+                    }
                     if (onCameraSurfaceListener != null) {
                         onCameraSurfaceListener.afterCreate();
                     }
