@@ -12,15 +12,4 @@
         android:layout_height="match_parent"
         app:easycam_isShowTop="true"
         />
-
-    <Button
-        android:textSize="19sp"
-        android:textColor="#0f0"
-        android:gravity="center"
-        android:layout_centerInParent="true"
-        android:background="@drawable/shape_round"
-        android:padding="10dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="时候 时候 时候 时候 时候 时候 "/>
 </RelativeLayout>

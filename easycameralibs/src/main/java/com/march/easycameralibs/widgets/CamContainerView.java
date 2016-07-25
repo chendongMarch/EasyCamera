@@ -33,7 +33,6 @@ public class CamContainerView extends FrameLayout {
         init();
     }
 
-
     private CameraSurfaceView mSurfaceView;
     private ViewGroup mBotBar;
     private ViewGroup mTopBar;
