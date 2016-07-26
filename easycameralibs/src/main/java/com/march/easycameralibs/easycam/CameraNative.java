@@ -130,10 +130,9 @@ public class CameraNative {
      * 公开数据处理方法
      *
      * @param data       数据
-     * @param sampleSize 采样率
      * @return 位图
      */
-    public Bitmap handlePicData(byte[] data, int sampleSize, CameraInfo info) {
+    public Bitmap handlePicData(byte[] data, CameraInfo info) {
         return mDataProcessController.findBitmap(info, data);
     }
 
@@ -439,9 +438,9 @@ public class CameraNative {
      * @param immediateCamInfo 信息
      * @param fileName         文件名
      */
-    private void savePic(Bitmap bitmap, CameraInfo immediateCamInfo, String fileName) {
+    private void savePic(Bitmap bitmap, byte[] data, CameraInfo immediateCamInfo, String fileName) {
         //保存
-        mDataProcessController.savePic(bitmap, fileName, immediateCamInfo, new Runnable() {
+        mDataProcessController.savePic(bitmap, data, fileName, immediateCamInfo, new Runnable() {
             @Override
             public void run() {
                 synchronized (saveNum) {
@@ -471,7 +470,6 @@ public class CameraNative {
             LogHelper.get().toast("请稍候拍摄");
             return false;
         }
-
         isCanTakePic = false;
         try {
             mCameraInst.takePicture(null, null, new Camera.PictureCallback() {
@@ -479,6 +477,7 @@ public class CameraNative {
                 public void onPictureTaken(byte[] data, Camera camera) {
                     publishPicData(false, data, fileName, listener);
                     startPreview();
+                    isCanTakePic = true;
                 }
             });
         } catch (Exception e) {
@@ -547,25 +546,25 @@ public class CameraNative {
      * @param listener 监听
      */
     private void publishPicData(boolean isFast, byte[] postData,
-                                String fileName, @NonNull OnTakePicListener listener) {
+                                String fileName, OnTakePicListener listener) {
         byte[] data;
         if (isFast)
             data = mDataProcessController.convertPreviewData(mCameraInst, postData);
         else
             data = postData;
-        int inSampleSize = listener.getInSampleSize(data);
+        int inSampleSize = 1;
+        boolean isSave2Local = false;
         CameraInfo immediateCamInfo = getImmediateCamInfo(inSampleSize);
-        //如果只获取原始数据
-        if (listener.isOnlyGetOriginData()) {
+        if (listener != null) {
+            inSampleSize = listener.getInSampleSize(data);
+            immediateCamInfo = getImmediateCamInfo(inSampleSize);
             listener.onTakePic(data, immediateCamInfo);
-        } else if (fileName != null) {
+            isSave2Local = listener.isSave2Local();
+        }
+        //如果文件名不为空，存储
+        if (fileName != null && isSave2Local) {
             takeNum++;
-            //如果压缩成位图，同时存储
-            Bitmap bitmap = mDataProcessController.findBitmap(immediateCamInfo, data);
-            listener.onTakePic(bitmap);
-            savePic(bitmap, immediateCamInfo, fileName);
-        } else {
-            LogHelper.get().printError("when u want to get bitmap, filename must not ne null");
+            savePic(null, postData, immediateCamInfo, fileName);
         }
     }
 
@@ -758,14 +757,9 @@ public class CameraNative {
 
         }
 
-        //获取拍摄的数据，isOnlyGetOriginData为false时返回位图同时进行存储
-        public void onTakePic(Bitmap bit) {
-
-        }
-
-        //是否只获取原始的byte数据，默认false
-        public boolean isOnlyGetOriginData() {
-            return false;
+        //是否保存到本地
+        public boolean isSave2Local() {
+            return true;
         }
 
         //采样的标准，根据二进制数据大小决定采样率默认是1

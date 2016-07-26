@@ -150,21 +150,15 @@ public boolean switchCameraFacing(int cameraId)
 ```java
 //拍照回调的接口，它不但是数据回调的接口也是对数据处理进行的参数配置，实现部分方法
 public static abstract class OnTakePicListener {
-        //获取拍摄的数据，isOnlyGetOriginData为true时返回原始数据，
-        //该方法的速度是相对较快的，因为不进行存储裁剪存储等操作。
+         // 在操作过程中会返回data,由开发者自己做更多处理
         //当你想将它转化为bitmap时调用mCameraNative.handlePicData()方法进行转换
         public void onTakePic(byte[] data, CameraInfo info) {
 
         }
 
-        //获取拍摄的数据，isOnlyGetOriginData为false时返回位图同时进行存储
-        public void onTakePic(Bitmap bit) {
-
-        }
-
-        //是否只获取原始的byte数据，默认false
-        public boolean isOnlyGetOriginData() {
-            return false;
+        //是否保存到本地，默认保存
+        public boolean isSave2Local() {
+             return true;
         }
 
         //采样的标准，根据二进制数据大小决定采样率默认是1
@@ -210,18 +204,13 @@ public void clickBtn(View view) {
                     }
 
                     @Override
-                    public void onTakePic(Bitmap bit) {
-                        //当isOnlyGetOriginData为true时，将不会返回bitmap
-                    }
-
-                    @Override
-                    public boolean isOnlyGetOriginData() {
+                    public boolean isSave2Local() {
                         return true;
                     }
 
                     @Override
                     public int getInSampleSize(byte[] data) {
-                        return data.length % 10000;
+                        return 2;
                     }
                 });
                 break;

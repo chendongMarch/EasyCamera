@@ -49,20 +49,36 @@ public class DataProcessController {
     }
 
 
-    public void savePic(final Bitmap bitmap, final String filename, final CameraInfo info, final Runnable afterSave) {
+
+    /**
+     * 使用线程池保存图片到文件
+     * @param bitmap 位图 二选一
+     * @param data 数据 二选一
+     * @param filename 文件名
+     * @param info 即时数据
+     * @param afterSave 保存之后的操作
+     */
+    public void savePic(final Bitmap bitmap, final byte[] data, final String filename, final CameraInfo info, final Runnable afterSave) {
         mSaveThread.execute(new Runnable() {
             @Override
             public void run() {
-                if (bitmap != null)
-                    if (!bitmap.isRecycled()) {
+                System.gc();
+                Bitmap newBitmap;
+                if (bitmap == null) {
+                    newBitmap = findBitmap(info, data);
+                } else {
+                    newBitmap = bitmap;
+                }
+                if (newBitmap != null)
+                    if (!newBitmap.isRecycled()) {
                         //保存到sd卡,可替换
-                        save2Sd(getSaveFile(filename), bitmap, 100);
+                        save2Sd(getSaveFile(filename), newBitmap, 100);
                     } else {
                         LogHelper.get().printError("bitmap is recycled");
                     }
 
-                if (bitmap != null && !bitmap.isRecycled())
-                    bitmap.recycle();
+                if (newBitmap != null && !newBitmap.isRecycled())
+                    newBitmap.recycle();
                 if (afterSave != null)
                     afterSave.run();
             }
@@ -86,7 +102,7 @@ public class DataProcessController {
         final YuvImage image = new YuvImage(data, ImageFormat.NV21, w, h, null);
         ByteArrayOutputStream os = new ByteArrayOutputStream(data.length);
         if (!image.compressToJpeg(new Rect(0, 0, w, h), 100, os)) {
-            LogHelper.get().printError( "image compressToJpeg fail");
+            LogHelper.get().printError("image compressToJpeg fail");
             return null;
         }
         return os.toByteArray();

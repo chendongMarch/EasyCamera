@@ -9,6 +9,7 @@ import android.view.WindowManager;
 import com.march.easycameralibs.common.CameraConstant;
 import com.march.easycameralibs.common.CameraInfo;
 import com.march.easycameralibs.easycam.CameraNative;
+import com.march.easycameralibs.helper.LogHelper;
 import com.march.easycameralibs.widgets.CamContainerView;
 
 import butterknife.Bind;
@@ -29,6 +30,17 @@ public class CamActivity extends AppCompatActivity {
         setContentView(R.layout.activity_cam);
         ButterKnife.bind(this);
         cameraNative = CameraNative.getInst();
+        cameraNative.setOnSavePicListener(new CameraNative.OnSavePicListener() {
+            @Override
+            public void InSaveProgress(int num, float percent) {
+                LogHelper.get().printError("save " + num);
+            }
+
+            @Override
+            public void OnSaveOver() {
+                LogHelper.get().printError("save over");
+            }
+        });
     }
 
     @OnClick({
@@ -44,22 +56,18 @@ public class CamActivity extends AppCompatActivity {
                 cameraNative.doTakePic(System.currentTimeMillis() + ".jpg", new CameraNative.OnTakePicListener() {
                     @Override
                     public void onTakePic(byte[] data, CameraInfo info) {
-                        Bitmap bitmap = CameraNative.getInst().handlePicData(data, 1, info);
+                        //获取bitmap
+//                        Bitmap bitmap = CameraNative.getInst().handlePicData(data, info);
                     }
 
                     @Override
-                    public void onTakePic(Bitmap bit) {
-                        //当isOnlyGetOriginData为true时，将不会返回bitmap
-                    }
-
-                    @Override
-                    public boolean isOnlyGetOriginData() {
+                    public boolean isSave2Local() {
                         return true;
                     }
 
                     @Override
                     public int getInSampleSize(byte[] data) {
-                        return data.length % 10000;
+                        return 1;
                     }
                 });
                 break;
@@ -85,7 +93,6 @@ public class CamActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        CameraNative.newInst(CamActivity.this, camContainerView);
         CameraNative.getInst().onResume();
     }
 

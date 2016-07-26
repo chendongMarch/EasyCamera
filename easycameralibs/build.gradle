@@ -4,7 +4,6 @@ apply plugin: 'com.jfrog.bintray'
 version = "1.0.8"
 android {
     resourcePrefix "easycam_"
-
     compileSdkVersion 22
     buildToolsVersion "23.0.2"
 
