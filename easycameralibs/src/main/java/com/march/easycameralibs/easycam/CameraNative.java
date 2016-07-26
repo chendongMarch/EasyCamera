@@ -45,8 +45,8 @@ public class CameraNative {
 
     private Context context;
     private SurfaceView surfaceView;
-    private CamContainerView camContainerView;
-    private static CameraNative cameraNative;
+    private CamContainerView mCamContainerView;
+    private static CameraNative mCameraNative;
     private Handler handler;
     //感应器，当横向拍照时自动旋转
     private OrientationEventListener mScreenOrientationEventListener;
@@ -70,10 +70,10 @@ public class CameraNative {
     /**
      * 私有化构造方法
      */
-    private CameraNative(Context context, CamContainerView camContainerView) {
+    private CameraNative(Context context, CamContainerView mCamContainerView) {
         this.context = context;
-        this.surfaceView = camContainerView.getSurfaceView();
-        this.camContainerView = camContainerView;
+        this.surfaceView = mCamContainerView.getSurfaceView();
+        this.mCamContainerView = mCamContainerView;
         LogHelper.newInst(context);
         handler = new Handler();
         width = context.getResources().getDisplayMetrics().widthPixels;
@@ -94,13 +94,13 @@ public class CameraNative {
      * 初始化单例
      *
      * @param context          context
-     * @param camContainerView CamContainerView
+     * @param mCamContainerView mCamContainerView
      */
-    public static void newInst(Context context, CamContainerView camContainerView) {
-        if (cameraNative == null) {
+    public static void newInst(Context context, CamContainerView mCamContainerView) {
+        if (mCameraNative == null) {
             synchronized (CameraNative.class) {
-                if (cameraNative == null) {
-                    cameraNative = new CameraNative(context, camContainerView);
+                if (mCameraNative == null) {
+                    mCameraNative = new CameraNative(context, mCamContainerView);
                 }
             }
         }
@@ -109,13 +109,13 @@ public class CameraNative {
     /**
      * 获取单例
      *
-     * @return cameranative
+     * @return mCameraNative
      */
     public static CameraNative getInst() {
-        if (cameraNative == null) {
+        if (mCameraNative == null) {
             throw new IllegalStateException("u must invoke the method newInst() at the first!");
         }
-        return cameraNative;
+        return mCameraNative;
     }
 
 
@@ -306,7 +306,7 @@ public class CameraNative {
         } else {
             this.mCurrentSize = size;
         }
-        camContainerView.changeDisplayUI();
+        mCamContainerView.changeDisplayUI();
     }
 
     /**
@@ -471,6 +471,7 @@ public class CameraNative {
             return false;
         }
         isCanTakePic = false;
+        mCamContainerView.splash();
         try {
             mCameraInst.takePicture(null, null, new Camera.PictureCallback() {
                 @Override
@@ -497,6 +498,7 @@ public class CameraNative {
      * @param listener 监听
      */
     public void doTakeOneShotPic(final String fileName, @NonNull final OnTakePicListener listener) {
+        mCamContainerView.splash();
         mCameraInst.setOneShotPreviewCallback(new Camera.PreviewCallback() {
             @Override
             public void onPreviewFrame(byte[] data, Camera camera) {
@@ -525,6 +527,7 @@ public class CameraNative {
      * @param listener 监听
      */
     public void doTakeFastPic(String fileName, @NonNull OnTakePicListener listener) {
+        mCamContainerView.splash();
         publishPicData(true, buffer, fileName, listener);
     }
 
@@ -652,7 +655,7 @@ public class CameraNative {
         doStopFastPic();
         releaseCamera();
         shutDownAutoRotate();
-        cameraNative = null;
+        mCameraNative = null;
         if (isAllowRememberLastTimeMode)
             mConfigController.putLastTimeMode(this.mTakeMode);
     }

@@ -5,9 +5,6 @@
 
 ###[库代码链接](https://github.com/chendongMarch/EasyCamera)
 ##compile 'com.march.cameralibs:easycameralibs:1.0.7'
-##更新日志
-###1.0.7 三星手机推出后台返回崩溃
-###1.0.8 小米红米note2机型适配
 
 ###在xml文件中使用
 ```java
@@ -190,6 +187,10 @@ public Bitmap handlePicData(byte[] data, int sampleSize, CameraInfo info)
 doTakePicOver()
 //停止照片自定旋转,横屏拍摄的照片将不会自动横向显示
 public void shutDownAutoRotate()
+//记住上次的模式。不需要每次都设置
+public void setAllowRememberLastTimeMode(boolean allowRememberLastTimeMode)
+//关闭log
+public void setLogEnable(boolean log)
 ```
 
 ###常用操作

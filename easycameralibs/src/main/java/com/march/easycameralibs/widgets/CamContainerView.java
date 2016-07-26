@@ -2,10 +2,12 @@ package com.march.easycameralibs.widgets;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
@@ -16,7 +18,9 @@ import com.march.easycameralibs.easycam.CameraNative;
 /**
  * CdLibsTest     com.march.libs.mycamera
  * Created by 陈栋 on 16/3/12.
- * 功能:主要是集中了，切换照片大小之后的UI变化和点击对焦的动画
+ * 功能:切换照片大小之后的UI变化
+ * 点击对焦的动画
+ * 拍照时闪光
  */
 public class CamContainerView extends FrameLayout {
     public CamContainerView(Context context) {
@@ -39,11 +43,15 @@ public class CamContainerView extends FrameLayout {
     private CameraSurfaceView mSurfaceView;
     private ViewGroup mBotBar;
     private ViewGroup mTopBar;
+    private View mSplashView;
     private CameraNative cameraNative;
     private int screenW, screenH;
     private boolean isShowTopBar;
+    private Handler handler;
 
     private void init() {
+        handler = new Handler();
+        mSplashView = findViewById(R.id.widget_cam_container_splash);
         mSurfaceView = (CameraSurfaceView) findViewById(R.id.widget_cam_container_surface);
         mBotBar = (ViewGroup) findViewById(R.id.widget_cam_container_bottombar);
         mTopBar = (ViewGroup) findViewById(R.id.widget_cam_container_topbar);
@@ -63,6 +71,17 @@ public class CamContainerView extends FrameLayout {
 
         changeDisplayUI();
     }
+
+    public void splash(){
+        mSplashView.setVisibility(VISIBLE);
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mSplashView.setVisibility(GONE);
+            }
+        },250);
+    }
+
 
     public SurfaceView getSurfaceView() {
         return mSurfaceView;
