@@ -430,6 +430,35 @@ public class CameraNative {
     }
 
 /**********************************************闪光灯END,拍摄照片START************************************************************/
+
+
+    /**
+     * 保存图片到文件
+     *
+     * @param bitmap           图片
+     * @param immediateCamInfo 信息
+     * @param fileName         文件名
+     */
+    private void savePic(Bitmap bitmap, CameraInfo immediateCamInfo, String fileName) {
+        //保存
+        mDataProcessController.savePic(bitmap, fileName, immediateCamInfo, new Runnable() {
+            @Override
+            public void run() {
+                synchronized (saveNum) {
+                    saveNum++;
+                    if (mOnSavePicListener != null && isStartPublishSaveProgress) {
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                mOnSavePicListener.InSaveProgress(saveNum, saveNum * 1.0f / takeNum);
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    }
+
     /**
      * 拍摄一张图片
      *
@@ -461,34 +490,6 @@ public class CameraNative {
         return true;
 
     }
-
-    /**
-     * 保存图片到文件
-     *
-     * @param bitmap           图片
-     * @param immediateCamInfo 信息
-     * @param fileName         文件名
-     */
-    private void savePic(Bitmap bitmap, CameraInfo immediateCamInfo, String fileName) {
-        //保存
-        mDataProcessController.savePic(bitmap, fileName, immediateCamInfo, new Runnable() {
-            @Override
-            public void run() {
-                synchronized (saveNum) {
-                    saveNum++;
-                    if (mOnSavePicListener != null && isStartPublishSaveProgress) {
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                mOnSavePicListener.InSaveProgress(saveNum, saveNum * 1.0f / takeNum);
-                            }
-                        });
-                    }
-                }
-            }
-        });
-    }
-
 
     /**
      * 一次快速连拍,但是不同机型回调的时间差别大

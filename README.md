@@ -173,7 +173,7 @@ public static abstract class OnTakePicListener {
         }
     }
 //普通拍照
-public boolean doTakePic(String fileName, boolean isConvert2Bit, OnTakePicListener listener)
+public boolean doTakePic(String fileName, OnTakePicListener listener)
 
 //快速连拍
 //开始连拍时调用doStartTakeFastPic()
