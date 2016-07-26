@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:layout_height="match_parent">
 
     <com.march.easycameralibs.widgets.CamContainerView
         android:id="@+id/activity_mycamera_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        />
-
+        app:easycam_isShowTop="true" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -24,48 +21,42 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="拍照"
-            />
+            android:text="拍照" />
 
         <Button
             android:id="@+id/activity_mycamera_switch"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="镜头"
-            />
+            android:text="镜头" />
 
         <Button
             android:id="@+id/activity_mycamera_flash"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="闪光"
-            />
-
-        <Button
-            android:id="@+id/activity_mycamera_over"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="结束"
-            />
+            android:text="闪光" />
 
         <Button
             android:id="@+id/activity_mycamera_mode"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="模式"
-            />
+            android:text="模式" />
 
         <Button
             android:id="@+id/activity_mycamera_size"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="大小"
-            />
+            android:text="大小" />
+
+        <Button
+            android:id="@+id/activity_mycamera_over"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="结束" />
 
     </LinearLayout>
 

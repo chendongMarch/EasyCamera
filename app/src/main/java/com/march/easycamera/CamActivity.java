@@ -18,9 +18,6 @@ import butterknife.OnClick;
 
 public class CamActivity extends AppCompatActivity {
 
-
-    @Bind(R.id.activity_mycamera_container)
-    CamContainerView camContainerView;
     CameraNative cameraNative;
 
     @Override
@@ -79,6 +76,7 @@ public class CamActivity extends AppCompatActivity {
                 break;
             case R.id.activity_mycamera_over:
                 cameraNative.takePicOver();
+                finish();
                 break;
             case R.id.activity_mycamera_mode:
                 cameraNative.switchTakeMode(CameraConstant.AutoSwitch);
