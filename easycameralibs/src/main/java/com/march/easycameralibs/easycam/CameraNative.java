@@ -357,10 +357,10 @@ public class CameraNative {
      */
     public void switchTakeMode(int mode) {
         if (mode == CameraConstant.AutoSwitch) {
-            if (mTakeMode == CameraConstant.Mode_GIF)
+            if (mTakeMode == CameraConstant.Mode_FAST)
                 mTakeMode = CameraConstant.Mode_PIC;
             else
-                mTakeMode = CameraConstant.Mode_GIF;
+                mTakeMode = CameraConstant.Mode_FAST;
         } else {
             mTakeMode = mode;
         }
@@ -668,7 +668,7 @@ public class CameraNative {
         mCameraInst.stopPreview();
         parameters = mCameraInst.getParameters();
 
-        if (mTakeMode == CameraConstant.Mode_GIF) {
+        if (mTakeMode == CameraConstant.Mode_FAST) {
             parameters.setPictureFormat(ImageFormat.NV21);
             previewSize = mConfigController.getPropPreviewSize(mCameraInst, 1.3333f, 500);
             pictureSize = mConfigController.getPropPictureSize(mCameraInst, 1.3333f, 500);

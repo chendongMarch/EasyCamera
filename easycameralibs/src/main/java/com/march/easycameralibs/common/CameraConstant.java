@@ -13,7 +13,7 @@ public class CameraConstant {
     //镜头方向
     public static final int CAMERA_FACING_BACK = 0, CAMERA_FACING_FRONT = 1;
     //拍摄模式
-    public static final int Mode_GIF = 0, Mode_PIC = 1;
+    public static final int Mode_FAST = 0, Mode_PIC = 1;
     //照片大小
     public static final int One2One = 0, Four2Three = 1;
     //自动切换

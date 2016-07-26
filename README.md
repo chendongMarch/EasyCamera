@@ -1,7 +1,9 @@
 #EasyCamera
 
-##希望能很好的封装关于Camera的一系列操作，简化关于Camera的开发，类库正在不断完善当中
-##图片的拍摄和存储异步进行，支持照片拍摄和快速连拍
+##希望能很好的封装关于Camera的一系列操作，简化关于Camera的开发。
+###为了解决拍照延时的问题，采用了图片的拍摄和存储异步进行的方式。
+###支持照片拍摄（PIC,采用的是camera拍摄毁掉的方式）和快速连拍(FAST，采用的是预览获取帧然后处理的方式)
+###支持照片自动旋转
 
 ###[库代码链接](https://github.com/chendongMarch/EasyCamera)
 ##compile 'com.march.cameralibs:easycameralibs:1.0.7'
@@ -201,7 +203,7 @@ public void clickBtn(View view) {
                 cameraNative.doTakePic(System.currentTimeMillis() + ".jpg", new CameraNative.OnTakePicListener() {
                     @Override
                     public void onTakePic(byte[] data, CameraInfo info) {
-                        Bitmap bitmap = CameraNative.getInst().handlePicData(data, 1, info);
+                        Bitmap bitmap = CameraNative.getInst().handlePicData(data, info);
                     }
 
                     @Override
