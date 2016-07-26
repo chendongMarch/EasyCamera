@@ -7,6 +7,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.march.easycameralibs.common.CameraConstant;
+import com.march.easycameralibs.helper.LogHelper;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -31,26 +32,6 @@ public class ConfigController {
         this.sizeComparator = new CameraSizeComparator();
     }
 
-    //   toast提示
-    public void toast(String msg) {
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
-    }
-
-    //  打印info消息
-    public void printInfo(String msg) {
-        if (isLog)
-            Log.i(CameraConstant.TAG, msg);
-    }
-
-    //    打印error提示
-    public void printError(String msg) {
-        if (isLog)
-            Log.e(CameraConstant.TAG, msg);
-    }
-
-    public void setLogEnable(boolean log) {
-        isLog = log;
-    }
 
     public int getCameraNumbers() {
         return Camera.getNumberOfCameras();
@@ -84,7 +65,7 @@ public class ConfigController {
                 downPolymorphic.invoke(mCameraInst, degree);
             }
         } catch (Exception e) {
-            printError("反射设置方向失败");
+            LogHelper.get().printError("反射设置方向失败");
         }
     }
 
@@ -268,9 +249,9 @@ public class ConfigController {
 
 
     private void printSize(String txt, List<Camera.Size> sizes) {
-        printInfo("type is " + txt);
+        LogHelper.get().printInfo("type is " + txt);
         for (Camera.Size s : sizes) {
-            printInfo("print( " + s.width + " * " + s.height + " rate = " + s.width * 1.0f / s.height + "  piexls = " + s.width * s.height);
+            LogHelper.get().printInfo("print( " + s.width + " * " + s.height + " rate = " + s.width * 1.0f / s.height + "  piexls = " + s.width * s.height);
         }
     }
 

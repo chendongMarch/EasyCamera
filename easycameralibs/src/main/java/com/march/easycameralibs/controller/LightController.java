@@ -5,6 +5,7 @@ import android.widget.ImageView;
 
 import com.march.easycameralibs.common.CameraConstant;
 import com.march.easycameralibs.easycam.CameraNative;
+import com.march.easycameralibs.helper.LogHelper;
 
 import java.util.List;
 
@@ -18,7 +19,6 @@ import java.util.List;
 public class LightController {
 
     private Camera cameraInst;
-
 
     public LightController(Camera cameraInst) {
         this.cameraInst = cameraInst;
@@ -36,17 +36,17 @@ public class LightController {
      */
     private boolean checkCanSwitchLight(ImageView flashBtn, int[] res, int resCount, int mCurrentCameraId) {
         if (mCurrentCameraId == CameraConstant.CAMERA_FACING_FRONT) {
-            ConfigController.get().printError("facing front camera not support change flash mode");
+            LogHelper.get().printError("facing front camera not support change flash mode");
             return false;
         }
         if (cameraInst == null || cameraInst.getParameters() == null
                 || cameraInst.getParameters().getSupportedFlashModes() == null) {
-            ConfigController.get().printError("camera not init over");
+            LogHelper.get().printError("camera not init over");
             return false;
         }
 
         if (res != null && res.length != resCount && flashBtn != null) {
-            ConfigController.get().printError("This method is not allow auto light,u must provide 3 image resource!");
+            LogHelper.get().printError("This method is not allow auto light,u must provide 3 image resource!");
             return false;
         }
         return true;

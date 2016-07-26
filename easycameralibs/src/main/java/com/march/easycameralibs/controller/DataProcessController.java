@@ -13,6 +13,7 @@ import android.util.Log;
 import com.march.easycameralibs.common.CameraConstant;
 import com.march.easycameralibs.common.CameraInfo;
 import com.march.easycameralibs.easycam.CameraNative;
+import com.march.easycameralibs.helper.LogHelper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -57,7 +58,7 @@ public class DataProcessController {
                         //保存到sd卡,可替换
                         save2Sd(getSaveFile(filename), bitmap, 100);
                     } else {
-                        Log.e(CameraConstant.TAG, "bitmap is recycled");
+                        LogHelper.get().printError("bitmap is recycled");
                     }
 
                 if (bitmap != null && !bitmap.isRecycled())
@@ -85,7 +86,7 @@ public class DataProcessController {
         final YuvImage image = new YuvImage(data, ImageFormat.NV21, w, h, null);
         ByteArrayOutputStream os = new ByteArrayOutputStream(data.length);
         if (!image.compressToJpeg(new Rect(0, 0, w, h), 100, os)) {
-            Log.e(CameraConstant.TAG, "image compressToJpeg fail");
+            LogHelper.get().printError( "image compressToJpeg fail");
             return null;
         }
         return os.toByteArray();
@@ -152,7 +153,7 @@ public class DataProcessController {
         Bitmap bit = BitmapFactory.decodeByteArray(data, 0, data.length, options);
         Log.e(CameraConstant.TAG, "degree is " + degree);
         if (!isHorizontalScale && !isVerticalScale && (Math.abs(degree - 360) < 5 || Math.abs(degree) < 5)) {
-            Log.e(CameraConstant.TAG, "此时图片不需要旋转或者镜像翻转处理," +
+            LogHelper.get().printError("此时图片不需要旋转或者镜像翻转处理," +
                     "\n当前sdk版本 = " + Build.VERSION.SDK_INT + "  " +
                     "\n当前手机旋转角度 angle = " + degree + "  " +
                     "\n当前镜头朝向 = " + (CameraNative.getInst().getCurrentCameraId() == 0 ? "后置" : "前置"));

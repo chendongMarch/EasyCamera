@@ -18,6 +18,7 @@ import com.march.easycameralibs.common.CameraInfo;
 import com.march.easycameralibs.controller.ConfigController;
 import com.march.easycameralibs.controller.DataProcessController;
 import com.march.easycameralibs.controller.LightController;
+import com.march.easycameralibs.helper.LogHelper;
 import com.march.easycameralibs.widgets.CamContainerView;
 
 import java.io.File;
@@ -73,7 +74,7 @@ public class CameraNative {
         this.context = context;
         this.surfaceView = camContainerView.getSurfaceView();
         this.camContainerView = camContainerView;
-
+        LogHelper.newInst(context);
         handler = new Handler();
         width = context.getResources().getDisplayMetrics().widthPixels;
         height = context.getResources().getDisplayMetrics().heightPixels;
@@ -151,7 +152,7 @@ public class CameraNative {
 
 
     public void setLogEnable(boolean log) {
-        mConfigController.setLogEnable(log);
+        LogHelper.get().setLogEnable(log);
     }
 
     /**
@@ -205,10 +206,10 @@ public class CameraNative {
         try {
             mCameraInst.setParameters(parameters);
         } catch (Exception e) {
-            mConfigController.printInfo("initCamera 设置出错" + e.getMessage());
+            LogHelper.get().printInfo("initCamera 设置出错" + e.getMessage());
             StackTraceElement[] stackTrace = e.getStackTrace();
             for (StackTraceElement s : stackTrace) {
-                mConfigController.printInfo(s.toString());
+                LogHelper.get().printInfo(s.toString());
             }
         }
 
@@ -266,7 +267,7 @@ public class CameraNative {
      */
     public void openCamera(final int id) {
         try {
-            mCameraInst= Camera.open(id);
+            mCameraInst = Camera.open(id);
         } catch (Exception e) {
             publishError(CameraConstant.ERROR_OPEN_CAMERA_FAILED, "open failed");
             e.printStackTrace();
@@ -278,7 +279,7 @@ public class CameraNative {
             mCameraInst.setPreviewDisplay(surfaceView.getHolder());
         } catch (IOException e) {
             e.printStackTrace();
-            mConfigController.printError("initSurfaceHolder 出错");
+            LogHelper.get().printError("initSurfaceHolder 出错");
         }
     }
 
@@ -287,7 +288,7 @@ public class CameraNative {
         try {
             mCameraInst.startPreview();
         } catch (Exception e) {
-            mConfigController.printError("startPreview 出错");
+            LogHelper.get().printError("startPreview 出错");
         }
     }
 /**************************************Camera初始化相关END,切换图片大小，拍摄模式，镜头转向START*********************************************************/
@@ -324,7 +325,7 @@ public class CameraNative {
             else
                 iv.setImageResource(res[1]);
         } else {
-            mConfigController.printError("if u do not want to change image res,use switchPicSize(int size) please!");
+            LogHelper.get().printError("if u do not want to change image res,use switchPicSize(int size) please!");
         }
     }
 
@@ -336,7 +337,7 @@ public class CameraNative {
      */
     public boolean switchCameraFacing(int cameraId) {
         if (!mConfigController.isCanSwitchCameraFacing()) {
-            mConfigController.printError("This device not support switch camera!");
+            LogHelper.get().printError("This device not support switch camera!");
             return false;
         }
         //自动切换
@@ -438,7 +439,7 @@ public class CameraNative {
      */
     public boolean doTakePic(final String fileName, @NonNull final OnTakePicListener listener) {
         if (!isCanTakePic) {
-            mConfigController.toast("请稍候拍摄");
+            LogHelper.get().toast("请稍候拍摄");
             return false;
         }
 
@@ -563,7 +564,7 @@ public class CameraNative {
             listener.onTakePic(bitmap);
             savePic(bitmap, immediateCamInfo, fileName);
         } else {
-            mConfigController.printError("when u want to get bitmap, filename must not ne null");
+            LogHelper.get().printError("when u want to get bitmap, filename must not ne null");
         }
     }
 
@@ -676,7 +677,7 @@ public class CameraNative {
             pictureSize = mConfigController.getPropPictureSize(mCameraInst, 1.3333f, 3000000);
         }
 
-        mConfigController.printError("计算获取到  preview = " + previewSize.width + "*" + previewSize.height + "   " + "  pic = " +
+        LogHelper.get().printError("计算获取到  preview = " + previewSize.width + "*" + previewSize.height + "   " + "  pic = " +
                 pictureSize.width + "*" + pictureSize.height);
 
         parameters.setPreviewSize(previewSize.width, previewSize.height);
@@ -686,15 +687,15 @@ public class CameraNative {
             mCameraInst.setParameters(parameters);
             startPreview();
         } catch (Exception e) {
-            mConfigController.printInfo("resetCameraSize 设置出错" + e.getMessage());
+            LogHelper.get().printInfo("resetCameraSize 设置出错" + e.getMessage());
             StackTraceElement[] stackTrace = e.getStackTrace();
             for (StackTraceElement s : stackTrace) {
-                mConfigController.printInfo(s.toString());
+                LogHelper.get().printInfo(s.toString());
             }
             startPreview();
         }
 
-        mConfigController.printInfo("设置完毕后  preview = " + mCameraInst.getParameters().getPreviewSize().width + "*" + mCameraInst.getParameters().getPreviewSize().height + "   " + "  pic = " +
+        LogHelper.get().printInfo("设置完毕后  preview = " + mCameraInst.getParameters().getPreviewSize().width + "*" + mCameraInst.getParameters().getPreviewSize().height + "   " + "  pic = " +
                 mCameraInst.getParameters().getPictureSize().width + "*" + mCameraInst.getParameters().getPictureSize().height);
     }
 
@@ -715,7 +716,7 @@ public class CameraNative {
                 e.printStackTrace();
             }
         } else {
-            mConfigController.toast("镜头切换失败");
+            LogHelper.get().toast("镜头切换失败");
         }
     }
 
@@ -747,6 +748,7 @@ public class CameraNative {
         void InSaveProgress(int num, float percent);
 
         void OnSaveOver();
+
     }
 
     public static abstract class OnTakePicListener {
